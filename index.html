@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>CitySaathi — A Cleaner Bengaluru Together</title>
+  <meta name="description" content="CitySaathi is a modern civic-tech platform empowering citizens to report issues, track real-time resolution, and collaborate with city authorities for cleaner, smarter neighbourhoods.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Favicon SVG -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563EB'/%3E%3Cstop offset='100%25' stop-color='%2338BDF8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%230B132B'/%3E%3Cpath d='M16 6L24 12V22L16 27L8 22V12L16 6Z' fill='none' stroke='url(%23g)' stroke-width='2.5' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='16.5' r='3.5' fill='%2338BDF8'/%3E%3C/svg%3E">
+</head>
+<body>
+  <!-- Branded Quick Loader -->
+  <div id="citySaathiLoader" class="app-loader hidden" aria-hidden="true">
+    <div class="loader-content">
+      <div class="loader-pulse-ring">
+        <svg viewBox="0 0 36 36" fill="none" class="loader-svg"><rect width="36" height="36" rx="10" fill="#2563EB"/><path d="M18 7L27 13.5V23.5L18 29.5L9 23.5V13.5L18 7Z" stroke="#FFFFFF" stroke-width="2"/><circle cx="18" cy="18" r="4.5" fill="#38BDF8"/></svg>
+      </div>
+      <div class="loader-text">
+        <strong>CitySaathi</strong>
+        <span id="loaderMsg">Connecting civic intelligence grid...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Global Announcement / Prototype Banner (hidden by default to keep navbar flush at top) -->
+  <aside class="demo-banner" id="demoBanner" style="display: none;">
+    <div class="demo-banner-content">
+      <span class="pulse-dot"></span>
+      <span class="banner-text"><strong>CitySaathi Live Platform</strong> — AI-Powered Civic Complaint & Resolution System for Bengaluru.</span>
+      <div class="banner-actions">
+        <button type="button" class="btn-text-link" id="loadDemoDataBtn" title="Pre-fill sample Bengaluru civic reports">⚡ Load Demo Data</button>
+        <button type="button" class="btn-text-link" id="resetDataBtn" title="Reset to initial state">↺ Reset</button>
+        <button type="button" class="banner-close" id="closeBannerBtn" aria-label="Dismiss banner">&times;</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Navigation Bar -->
+  <header class="navbar" id="navbar">
+    <div class="nav-container">
+      <div class="nav-brand" id="brandHomeBtn" role="button" tabindex="0" title="CitySaathi Home">
+        <div class="brand-logo-mark">
+          <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="citysaathi-logo-svg">
+            <rect width="36" height="36" rx="10" fill="url(#brandGrad)"/>
+            <path d="M18 7L27 13.5V23.5L18 29.5L9 23.5V13.5L18 7Z" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M18 14V22" stroke="#93C5FD" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M14 18H22" stroke="#93C5FD" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="18" cy="18" r="4.5" fill="#38BDF8" fill-opacity="0.9"/>
+            <defs>
+              <linearGradient id="brandGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#1D4ED8"/>
+                <stop offset="1" stop-color="#0284C7"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">
+            CITYSAATHI
+            <span class="brand-badge">Bengaluru</span>
+          </div>
+          <span class="brand-tagline">Your City. Your Voice. Your Saathi.</span>
+        </div>
+      </div>
+
+      <!-- Desktop Nav Tabs (Matching Screen 1) -->
+      <nav class="nav-tabs" aria-label="Primary navigation">
+        <button class="nav-link active" data-tab="home" id="tab-home">
+          <span>Home</span>
+        </button>
+        <button class="nav-link" data-tab="report" id="tab-report">
+          <span>Report</span>
+        </button>
+        <button class="nav-link" data-tab="map" id="tab-map">
+          <span>Explore</span>
+        </button>
+        <button class="nav-link authority-tab-link" data-tab="authority" id="tab-authority">
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-link" data-tab="community" id="tab-community">
+          <span>About</span>
+        </button>
+      </nav>
+
+      <!-- Right Utility Controls (Matching Screen 1: Search, Login, Get Started White Pill) -->
+      <div class="nav-actions">
+        <!-- Global Search Button -->
+        <button class="action-icon-btn" id="openSearchBtn" aria-label="Search complaints" title="Search issues (Ctrl+K)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </button>
+
+        <!-- Notification Bell (shown when logged in) -->
+        <div class="notification-wrapper hidden" id="navNotifWrap">
+          <button class="action-icon-btn" id="notificationBtn" aria-label="Notifications" title="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="notif-badge" id="notifBadge">3</span>
+          </button>
+          
+          <!-- Notification Dropdown -->
+          <div class="notification-dropdown" id="notificationDropdown">
+            <div class="notif-header">
+              <h3>Civic Updates</h3>
+              <button class="btn-text-link" id="markAllReadBtn">Mark all read</button>
+            </div>
+            <div class="notif-list" id="notifList">
+              <!-- Populated via JS -->
+            </div>
+            <div class="notif-footer">
+              <span>Automatic real-time ward notifications enabled</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dark/Light Theme Toggle -->
+        <button class="action-icon-btn theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle dark/light mode" title="Toggle theme">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+
+        <!-- Login and Get Started CTA buttons (as in reference image) -->
+        <button type="button" class="btn btn-ghost-nav" id="navLoginBtn">Login</button>
+        <button type="button" class="btn btn-pill-nav" id="navGetStartedBtn">Get Started</button>
+
+        <!-- Citizen Profile Avatar Button (hidden in guest mode, shown upon login) -->
+        <button class="profile-pill-btn hidden" id="profileBtn" title="Session Profile & Role Switcher">
+          <span class="avatar-ring" id="navAvatarRing">CS</span>
+          <span class="profile-name" id="navProfileName">Citizen (Bengaluru)</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron-icon"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Global App Container -->
+  <main class="app-main" id="appMain">
+    
+    <!-- ============================================== -->
+    <!-- VIEW 1: HOME / LANDING VIEW                    -->
+    <!-- ============================================== -->
+    <section class="view-section active" id="view-home">
+      
+      <!-- HERO SECTION WITH PHOTOREALISTIC 3D BENGALURU DIGITAL TWIN (Screen 1) -->
+      <div class="hero-wrapper">
+        <div class="hero-grid">
+          
+          <!-- Hero Left Column: Copy & Actions (Matching Screen 1) -->
+          <div class="hero-content">
+            <p class="hero-eyebrow">YOUR CITY. YOUR VOICE. YOUR SAATHI.</p>
+            <h1 class="hero-headline">
+              A Cleaner<br>
+              Bengaluru<br>
+              <span class="text-gold">Together</span>
+            </h1>
+            <p class="hero-subtext">
+              Report civic issues, track progress, and help make your neighbourhood better.
+            </p>
+            
+            <div class="hero-cta-group">
+              <button class="btn btn-pill-white btn-lg" id="heroReportBtn">
+                <span>Report an Issue &rarr;</span>
+              </button>
+              <button class="btn btn-pill-dark btn-lg" id="heroTrackBtn">
+                <span>Track Complaint</span>
+              </button>
+            </div>
+
+            <!-- Trust / Quick Metric Indicators (Matching Screen 1) -->
+            <div class="hero-stats-row">
+              <div class="hero-stat-item">
+                <div class="stat-number" id="heroStatReported">12.5K</div>
+                <div class="stat-label">Issues Reported</div>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="hero-stat-item">
+                <div class="stat-number" id="heroStatResolved">8.4K</div>
+                <div class="stat-label">Resolved Cases</div>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="hero-stat-item">
+                <div class="stat-number" id="heroStatResolutionRate">73%</div>
+                <div class="stat-label">Resolution Rate</div>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="hero-stat-item">
+                <div class="stat-number" id="heroStatWards">120+</div>
+                <div class="stat-label">Wards Covered</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hero Right Column: Seamless Borderless 3D Panoramic Visual (Matching Screen 1) -->
+          <div class="hero-visual-panoramic" id="heroPanoramic">
+            <div class="panoramic-city-wrapper" id="panoramicCityWrapper">
+              <!-- High-definition 3D Bengaluru City Aerial Model Render -->
+              <img src="assets/bengaluru_3d_city_hd.png" alt="Bengaluru 3D Smart City Digital Twin" class="bengaluru-city-img" id="bengaluruCityImg" loading="eager">
+              
+              <!-- Subtle atmospheric radial glow behind the city -->
+              <div class="city-ambient-glow"></div>
+
+              <!-- 4 Glowing Floating Glass Badges matching Screen 1 -->
+              <!-- Badge 1: Pothole / Indiranagar -->
+              <div class="floating-badge badge-pothole" style="top: 22%; left: 14%;" data-marker="pothole" role="button" tabindex="0">
+                <span class="badge-dot dot-red"></span>
+                <span class="badge-title">Pothole</span>
+              </div>
+
+              <!-- Badge 2: Streetlight / Koramangala -->
+              <div class="floating-badge badge-streetlight" style="top: 18%; right: 16%;" data-marker="streetlight" role="button" tabindex="0">
+                <span class="badge-dot dot-yellow"></span>
+                <span class="badge-title">Streetlight</span>
+              </div>
+
+              <!-- Badge 3: Drainage / Bellandur -->
+              <div class="floating-badge badge-drainage" style="top: 58%; left: 18%;" data-marker="water" role="button" tabindex="0">
+                <span class="badge-dot dot-blue"></span>
+                <span class="badge-title">Drainage</span>
+              </div>
+
+              <!-- Badge 4: Garbage / HSR Layout -->
+              <div class="floating-badge badge-garbage" style="top: 64%; right: 18%;" data-marker="garbage" role="button" tabindex="0">
+                <span class="badge-dot dot-green"></span>
+                <span class="badge-title">Garbage</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Scroll Indicator matching Screen 1 bottom-right -->
+        <div class="hero-scroll-indicator" id="heroScrollIndicator">
+          <div class="mouse-icon">
+            <div class="mouse-wheel"></div>
+          </div>
+          <span class="scroll-label">Scroll to explore</span>
+        </div>
+      </div>
+
+      <!-- SECTION: "YOUR CITY, CONNECTED" (4 Major Actions) -->
+      <section class="section-container">
+        <div class="section-header text-center">
+          <p class="section-eyebrow">CLOSED-LOOP CIVIC INFRASTRUCTURE</p>
+          <h2 class="section-title">Your city, connected.</h2>
+          <p class="section-description">
+            CitySaathi replaces outdated one-way complaint boxes with an intelligent, multi-stakeholder loop ensuring full accountability from first photo to citizen sign-off.
+          </p>
+        </div>
+
+        <div class="pillars-grid">
+          <!-- Pillar 1: Report -->
+          <div class="pillar-card" id="pillarReport">
+            <div class="pillar-step-badge">01</div>
+            <div class="pillar-icon-wrapper icon-blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+            <h3 class="pillar-title">1. Report</h3>
+            <p class="pillar-desc">
+              Snap a photo, voice your issue, or pick your location. Our lightweight AI automatically categorizes and estimates safety priority.
+            </p>
+            <span class="pillar-link">Quick Report &rarr;</span>
+          </div>
+
+          <!-- Pillar 2: Track -->
+          <div class="pillar-card" id="pillarTrack">
+            <div class="pillar-step-badge">02</div>
+            <div class="pillar-icon-wrapper icon-purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h3 class="pillar-title">2. Track</h3>
+            <p class="pillar-desc">
+              Watch your ticket advance through live municipal stages with transparent SLA clocks, assigned BBMP/BESCOM engineers, and live dispatch logs.
+            </p>
+            <span class="pillar-link">Track Complaints &rarr;</span>
+          </div>
+
+          <!-- Pillar 3: Resolve -->
+          <div class="pillar-card" id="pillarResolve">
+            <div class="pillar-step-badge">03</div>
+            <div class="pillar-icon-wrapper icon-amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <h3 class="pillar-title">3. Resolve</h3>
+            <p class="pillar-desc">
+              Field crews complete repairs and upload mandatory photographic evidence with timestamp and geo-stamp before marking work done.
+            </p>
+            <span class="pillar-link">View Authority View &rarr;</span>
+          </div>
+
+          <!-- Pillar 4: Verify -->
+          <div class="pillar-card" id="pillarVerify">
+            <div class="pillar-step-badge">04</div>
+            <div class="pillar-icon-wrapper icon-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <h3 class="pillar-title">4. Verify</h3>
+            <p class="pillar-desc">
+              The issue is not closed until citizens verify with side-by-side Before/After comparison. You confirm: "Is this actually fixed?"
+            </p>
+            <span class="pillar-link">Citizen Verification &rarr;</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: CITIZEN DASHBOARD PREVIEW / QUICK ACCESS -->
+      <section class="section-container">
+        <div class="dashboard-greeting-banner">
+          <div class="greeting-left">
+            <h2 class="greeting-title" id="greetingGreeting">Good morning, Bengaluru citizen 👋</h2>
+            <p class="greeting-subtitle">Here is what is happening across your neighbourhood today.</p>
+          </div>
+          <div class="greeting-actions">
+            <button class="btn btn-primary" id="dashQuickReportBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              <span>Quick Report</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Citizen Stat Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Total Complaints</span>
+              <span class="kpi-icon-pill icon-blue">📋</span>
+            </div>
+            <div class="kpi-value" id="dashTotalCount">0</div>
+            <div class="kpi-foot text-muted">Submitted across Bengaluru</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Active In Progress</span>
+              <span class="kpi-icon-pill icon-amber">⏳</span>
+            </div>
+            <div class="kpi-value" id="dashActiveCount">0</div>
+            <div class="kpi-foot text-amber">Under active field repair</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Resolved & Verified</span>
+              <span class="kpi-icon-pill icon-green">✅</span>
+            </div>
+            <div class="kpi-value" id="dashResolvedCount">0</div>
+            <div class="kpi-foot text-green">Fixed & citizen approved</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Community Impact</span>
+              <span class="kpi-icon-pill icon-purple">🌟</span>
+            </div>
+            <div class="kpi-value" id="dashImpactScore">420 pts</div>
+            <div class="kpi-foot text-purple">Top 8% Active Saathis</div>
+          </div>
+        </div>
+
+        <!-- Recent Complaints Grid with Live Cards -->
+        <div class="home-split-grid">
+          <!-- Left: Recent Complaints List -->
+          <div class="card panel-card">
+            <div class="panel-header">
+              <div>
+                <h3 class="panel-title">Recent Civic Complaints</h3>
+                <p class="panel-subtitle">Your latest logged issues and their current live progress</p>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="viewAllComplaintsBtn">View All &rarr;</button>
+            </div>
+            <div class="complaints-feed" id="homeRecentFeed">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Right: Trending Bengaluru Issues & Ward Health Snapshot -->
+          <div class="home-sidebar">
+            <!-- Trending Issues Widget -->
+            <div class="card sidebar-widget">
+              <div class="widget-header">
+                <span class="widget-badge">TRENDING THIS WEEK</span>
+                <h4 class="widget-title">Most Reported Issues</h4>
+              </div>
+              <div class="trending-list" id="trendingList">
+                <div class="trending-item">
+                  <span class="trend-rank">1</span>
+                  <div class="trend-info">
+                    <strong>Potholes & Broken Asphalt</strong>
+                    <span>54 reports • Indiranagar & Whitefield</span>
+                  </div>
+                  <span class="trend-badge-red">+24%</span>
+                </div>
+                <div class="trending-item">
+                  <span class="trend-rank">2</span>
+                  <div class="trend-info">
+                    <strong>Commercial Garbage Dumps</strong>
+                    <span>38 reports • Koramangala 5th Block</span>
+                  </div>
+                  <span class="trend-badge-amber">+12%</span>
+                </div>
+                <div class="trending-item">
+                  <span class="trend-rank">3</span>
+                  <div class="trend-info">
+                    <strong>Streetlight Dark Stretches</strong>
+                    <span>29 reports • Outer Ring Road</span>
+                  </div>
+                  <span class="trend-badge-blue">Steady</span>
+                </div>
+                <div class="trending-item">
+                  <span class="trend-rank">4</span>
+                  <div class="trend-info">
+                    <strong>Stormwater Drain Clogs</strong>
+                    <span>22 reports • HSR Layout Sector 3</span>
+                  </div>
+                  <span class="trend-badge-green">-8%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ward Health Quick Glance -->
+            <div class="card sidebar-widget">
+              <div class="widget-header">
+                <span class="widget-badge">COMMUNITY INDEX</span>
+                <h4 class="widget-title">Indiranagar Ward 112</h4>
+              </div>
+              <div class="ward-score-display">
+                <div class="score-dial">
+                  <span class="score-number">84</span>
+                  <span class="score-max">/100</span>
+                </div>
+                <div class="score-text">
+                  <span class="score-status text-green">Good Civic Health</span>
+                  <p class="score-details">92% waste clearance, 86% streetlight uptime.</p>
+                </div>
+              </div>
+              <button class="btn btn-outline btn-sm full-width" id="exploreWardHealthBtn">Explore Ward Health Scorecard &rarr;</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </section>
+
+    <!-- ============================================== -->
+    <!-- VIEW 2: REPORT AN ISSUE (MULTI-STEP WIZARD)     -->
+    <!-- ============================================== -->
+    <section class="view-section" id="view-report">
+      <div class="section-container wizard-container">
+        
+        <!-- Wizard Progress Bar Header -->
+        <div class="wizard-header">
+          <div class="wizard-title-block">
+            <span class="eyebrow-tag">SMART REPORT WIZARD</span>
+            <h2 class="wizard-heading">Report a Civic Issue</h2>
+            <p class="wizard-subheading">Submit your complaint in 4 simple steps with automatic AI triage and duplicate prevention.</p>
+          </div>
+          
+          <!-- Step Indicators -->
+          <div class="wizard-stepper" id="wizardStepper">
+            <div class="step-node active" data-step="1">
+              <div class="step-circle">1</div>
+              <span class="step-title">Location</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-node" data-step="2">
+              <div class="step-circle">2</div>
+              <span class="step-title">Details & Photo</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-node" data-step="3">
+              <div class="step-circle">3</div>
+              <span class="step-title">AI Complaint Draft</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-node" data-step="4">
+              <div class="step-circle">4</div>
+              <span class="step-title">Review & Submit</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Container -->
+        <div class="card wizard-card">
+          <form id="multiStepComplaintForm" novalidate>
+            
+            <!-- --------------------------------------- -->
+            <!-- STEP 1: "Where is the issue?" (LOCATION FIRST) -->
+            <!-- --------------------------------------- -->
+            <div class="wizard-step-pane active" id="stepPane1">
+              <!-- Motivational Banner -->
+              <div class="wizard-motivational-banner">
+                <div class="wmb-left">
+                  <span class="wmb-step-counter">01 / 04</span>
+                  <h3 class="wmb-title">Pinpoint the Location First</h3>
+                  <p class="wmb-sub">Set the exact location on the Bengaluru map, search by landmark or ward, or use your device GPS so municipal engineers can locate the problem immediately.</p>
+                </div>
+                <div class="wmb-badge">
+                  <span>📍 Step 1: Location Precision</span>
+                </div>
+              </div>
+
+              <div class="pane-headline">
+                <span class="step-number-tag">STEP 1</span>
+                <h3>Where is the civic issue?</h3>
+                <p>Pin the exact location on the Bengaluru map, search by landmark, or use your device GPS.</p>
+              </div>
+
+              <!-- Location Search Bar with User-Triggered Lookup (Free Nominatim) -->
+              <div class="location-search-bar">
+                <div class="ls-input-wrap">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ls-icon"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                  <input type="text" id="mapSearchAddressInput" placeholder="Search Bengaluru area, landmark or street (e.g. Indiranagar 100ft Rd)..." class="form-control">
+                </div>
+                <button type="button" class="btn btn-secondary" id="searchAddressBtn">
+                  <span>Search</span>
+                </button>
+              </div>
+
+              <div class="location-step-grid">
+                <!-- Location Form Inputs -->
+                <div class="location-inputs-col">
+                  <!-- Quick Ward Selector -->
+                  <div class="form-group">
+                    <label for="formWard" class="form-label">Bengaluru Zone / Ward</label>
+                    <select id="formWard" class="form-control">
+                      <option value="Indiranagar (Ward 112)">Indiranagar — Ward 112 (East Zone)</option>
+                      <option value="Koramangala (Ward 151)">Koramangala — Ward 151 (South Zone)</option>
+                      <option value="Whitefield (Ward 84)">Whitefield — Ward 84 (Mahadevapura)</option>
+                      <option value="HSR Layout (Ward 174)">HSR Layout — Ward 174 (Bommanahalli)</option>
+                      <option value="MG Road / CBD (Ward 111)">MG Road / CBD — Ward 111 (Central Zone)</option>
+                      <option value="Malleshwaram (Ward 45)">Malleshwaram — Ward 45 (West Zone)</option>
+                      <option value="Jayanagar (Ward 153)">Jayanagar — Ward 153 (South Zone)</option>
+                      <option value="Electronic City">Electronic City (Phase 1 & 2)</option>
+                    </select>
+                  </div>
+
+                  <!-- Street / Landmark Input -->
+                  <div class="form-group">
+                    <label for="formLocation" class="form-label">
+                      Street Address / Landmark <span class="required">*</span>
+                    </label>
+                    <div class="input-with-action">
+                      <input type="text" id="formLocation" class="form-control" required
+                        placeholder="e.g. 100ft Road, Opposite Toit Brewery, Indiranagar">
+                      <button type="button" class="btn-inner-action" id="gpsAutoBtn" title="Detect GPS coordinates">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                        <span>Current GPS</span>
+                      </button>
+                    </div>
+                    <small id="gpsFeedback" class="field-hint"></small>
+                  </div>
+
+                  <!-- Coordinates Display -->
+                  <div class="coordinates-pill-box">
+                    <span class="coord-label">GPS Coordinates:</span>
+                    <span class="coord-val" id="displayCoords">12.9784° N, 77.6408° E</span>
+                  </div>
+
+                  <!-- Pin Manual Instruction with Draggable Notification -->
+                  <div class="map-hint-box">
+                    <span class="hint-icon">📍</span>
+                    <p><strong>Interactive Pin:</strong> Drag the red pin on the map or click anywhere to pinpoint the location. Coordinates and address will update automatically.</p>
+                  </div>
+                </div>
+
+                <!-- Interactive Mini Map for Location Picking -->
+                <div class="location-map-col">
+                  <div class="picker-map-wrapper">
+                    <div id="locationPickerMap" class="picker-map-canvas"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="wizard-btn-row">
+                <div></div>
+                <button type="button" class="btn btn-primary btn-pill-lg" id="step1NextBtn">
+                  <span>Continue to Issue Details &rarr;</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- --------------------------------------- -->
+            <!-- STEP 2: "Issue Details & Photo"        -->
+            <!-- --------------------------------------- -->
+            <div class="wizard-step-pane" id="stepPane2">
+              <!-- Location Reminder Context Banner -->
+              <div class="location-context-banner">
+                <div class="lcb-content">
+                  <span class="lcb-icon">📍</span>
+                  <div>
+                    <span class="lcb-label">Selected Location:</span>
+                    <strong class="lcb-val" id="step2LocationPillText">100 Feet Rd, Indiranagar (Ward 112)</strong>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-text-link btn-xs" id="changeLocationLink">Change Location</button>
+              </div>
+
+              <div class="pane-headline">
+                <span class="step-number-tag">STEP 2</span>
+                <h3>What is the issue?</h3>
+                <p>Select the municipal category, describe what you observed, and upload an optional photo.</p>
+              </div>
+
+              <!-- 3D / Isometric Style Category Grid -->
+              <div class="form-group">
+                <label class="form-label">Select Issue Category <span class="required">*</span></label>
+                <div class="category-cards-grid" id="categoryPicker">
+                  <!-- Card 1: Road & Potholes -->
+                  <div class="category-card selected" data-category="Road / Pothole" tabindex="0">
+                    <div class="cat-icon-3d road-color">
+                      <svg viewBox="0 0 48 48" fill="none" class="cat-svg">
+                        <rect width="48" height="48" rx="14" fill="#EEF2FF"/>
+                        <path d="M14 38L20 10H28L34 38H14Z" fill="#CBD5E1"/>
+                        <line x1="24" y1="14" x2="24" y2="20" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+                        <line x1="24" y1="26" x2="24" y2="34" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+                        <ellipse cx="22" cy="28" rx="5" ry="3" fill="#1E293B"/>
+                      </svg>
+                    </div>
+                    <h4 class="cat-name">Road / Pothole</h4>
+                    <p class="cat-desc">Crater potholes, broken asphalt, missing manhole covers, footpath damage</p>
+                    <span class="cat-agency">BBMP Infrastructure</span>
+                  </div>
+
+                  <!-- Card 2: Garbage / Waste -->
+                  <div class="category-card" data-category="Garbage / Waste" tabindex="0">
+                    <div class="cat-icon-3d waste-color">
+                      <svg viewBox="0 0 48 48" fill="none" class="cat-svg">
+                        <rect width="48" height="48" rx="14" fill="#ECFDF5"/>
+                        <path d="M16 16L18 36H30L32 16" stroke="#10B981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M13 16H35" stroke="#10B981" stroke-width="3" stroke-linecap="round"/>
+                        <path d="M20 16V12H28V16" stroke="#10B981" stroke-width="2.5" stroke-linecap="round"/>
+                        <line x1="21" y1="22" x2="21" y2="30" stroke="#059669" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="27" y1="22" x2="27" y2="30" stroke="#059669" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                    <h4 class="cat-name">Garbage / Waste</h4>
+                    <p class="cat-desc">Uncollected bins, roadside garbage blackspots, plastic dump, debris</p>
+                    <span class="cat-agency">Solid Waste Management</span>
+                  </div>
+
+                  <!-- Card 3: Streetlight -->
+                  <div class="category-card" data-category="Streetlight" tabindex="0">
+                    <div class="cat-icon-3d light-color">
+                      <svg viewBox="0 0 48 48" fill="none" class="cat-svg">
+                        <rect width="48" height="48" rx="14" fill="#FFFBEB"/>
+                        <path d="M20 38V18C20 13.58 23.58 10 28 10H32" stroke="#D97706" stroke-width="3" stroke-linecap="round"/>
+                        <path d="M26 12L32 10L30 18" fill="#F59E0B"/>
+                        <circle cx="31" cy="22" r="4" fill="#FDE047"/>
+                        <line x1="29" y1="28" x2="25" y2="33" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="35" y1="28" x2="38" y2="33" stroke="#FDE047" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                    <h4 class="cat-name">Streetlight</h4>
+                    <p class="cat-desc">Out of order streetlight, blinking lamp, hazardous exposed wiring, dark roads</p>
+                    <span class="cat-agency">BESCOM Electrical</span>
+                  </div>
+
+                  <!-- Card 4: Water & Drainage -->
+                  <div class="category-card" data-category="Water / Drainage" tabindex="0">
+                    <div class="cat-icon-3d water-color">
+                      <svg viewBox="0 0 48 48" fill="none" class="cat-svg">
+                        <rect width="48" height="48" rx="14" fill="#F0F9FF"/>
+                        <path d="M24 10C24 10 14 22 14 28C14 33.52 18.48 38 24 38C29.52 38 34 33.52 34 28C34 22 24 10 24 10Z" fill="#38BDF8"/>
+                        <path d="M20 28C20 25.79 21.79 24 24 24" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                    <h4 class="cat-name">Water / Drainage</h4>
+                    <p class="cat-desc">Burst supply pipeline, overflowing storm drain, sewage backup, standing water</p>
+                    <span class="cat-agency">BWSSB Water & Sewerage</span>
+                  </div>
+
+                  <!-- Card 5: Public Amenities & Others -->
+                  <div class="category-card" data-category="Public Amenities" tabindex="0">
+                    <div class="cat-icon-3d amenity-color">
+                      <svg viewBox="0 0 48 48" fill="none" class="cat-svg">
+                        <rect width="48" height="48" rx="14" fill="#FAF5FF"/>
+                        <circle cx="24" cy="24" r="14" stroke="#8B5CF6" stroke-width="3"/>
+                        <line x1="24" y1="18" x2="24" y2="24" stroke="#8B5CF6" stroke-width="3" stroke-linecap="round"/>
+                        <circle cx="24" cy="29" r="1.5" fill="#8B5CF6"/>
+                      </svg>
+                    </div>
+                    <h4 class="cat-name">Other / Public Amenity</h4>
+                    <p class="cat-desc">Park benches, damaged traffic signs, public toilet issues, fallen tree branch</p>
+                    <span class="cat-agency">BTP / Municipal Parks</span>
+                  </div>
+                </div>
+                <input type="hidden" id="formCategory" name="category" required value="Road / Pothole">
+              </div>
+
+              <div class="form-fields-stack">
+                <!-- Citizen Observation Field -->
+                <div class="form-group">
+                  <label for="formDescription" class="form-label">
+                    What did you observe? <span class="required">*</span>
+                    <span class="field-hint">(Describe the problem in your own words — Gemini AI will draft the official municipal report)</span>
+                  </label>
+                  <textarea id="formDescription" class="form-control" rows="4" maxlength="500" required
+                    placeholder="Describe what you observed (e.g. Deep crater pothole in the left lane damaging scooters during peak hours, garbage accumulated on corner footpath, streetlights completely dark for two nights)..."></textarea>
+                  <div class="textarea-footer">
+                    <span class="field-hint">Your observation is the factual source of truth for the complaint draft.</span>
+                    <span class="char-count"><span id="charCount">0</span>/500</span>
+                  </div>
+                </div>
+
+                <!-- Voice Description Audio Feature -->
+                <div class="form-group voice-feature-card">
+                  <div class="voice-header">
+                    <div class="voice-icon-pill">🎙️</div>
+                    <div class="voice-titles">
+                      <strong>Voice Description (Hands-free Option)</strong>
+                      <p>Speak your observation in Kannada, English, or Hindi.</p>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-sm" id="voiceRecordBtn">
+                      <span class="record-pulse-dot"></span>
+                      <span id="voiceRecordBtnLabel">Record Audio</span>
+                    </button>
+                  </div>
+                  <div class="voice-feedback hidden" id="voiceFeedback">
+                    <div class="audio-wave-bars" id="audioWaveBars">
+                      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="voice-transcript">
+                      <span class="transcript-label">AI Speech-to-Text Transcription:</span>
+                      <p class="transcript-text" id="voiceTranscriptText">Click record above and speak your description clearly...</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Optional Details: When Noticed & Stated Severity -->
+                <div class="optional-details-grid">
+                  <div class="form-group">
+                    <label for="formWhenNoticed" class="form-label">When was this noticed? (Optional)</label>
+                    <select id="formWhenNoticed" class="form-control">
+                      <option value="Just noticed today">Just noticed today</option>
+                      <option value="Yesterday">Yesterday</option>
+                      <option value="2-3 days ago">2-3 days ago</option>
+                      <option value="Over a week ago">Over a week ago</option>
+                      <option value="Persistent ongoing issue">Persistent ongoing issue</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Observed Severity (Optional)</label>
+                    <div class="severity-pill-selector">
+                      <label class="sev-pill">
+                        <input type="radio" name="severity" value="Normal" checked>
+                        <span class="sev-box sev-normal">Normal</span>
+                      </label>
+                      <label class="sev-pill">
+                        <input type="radio" name="severity" value="Urgent">
+                        <span class="sev-box sev-urgent">Urgent</span>
+                      </label>
+                      <label class="sev-pill">
+                        <input type="radio" name="severity" value="Critical">
+                        <span class="sev-box sev-critical">Critical</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Photo & Evidence Upload Area -->
+                <div class="form-group">
+                  <label class="form-label">Photo / Visual Evidence (Optional)</label>
+                  <div class="upload-dropzone" id="uploadDropzone">
+                    <input type="file" id="formPhotoFile" accept="image/*" class="file-input-hidden">
+                    <div class="dropzone-content" id="dropzoneContent">
+                      <div class="upload-icon-circle">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      </div>
+                      <p class="upload-main-text"><strong>Click to upload</strong> or drag & drop photo</p>
+                      <p class="upload-sub-text">PNG, JPG, WEBP up to 5MB</p>
+                    </div>
+
+                    <!-- Photo Preview Container -->
+                    <div class="dropzone-preview hidden" id="photoPreviewContainer">
+                      <img id="photoPreviewImg" src="" alt="Evidence preview">
+                      <div class="preview-actions">
+                        <span class="preview-tag">Evidence Attached</span>
+                        <button type="button" class="btn btn-sm btn-danger" id="removePhotoBtn">Remove</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Quick Demo Evidence Selectors for Presentation Demoing -->
+                  <div class="quick-demo-photos">
+                    <span class="qdp-label">💡 Presentation Demo Samples:</span>
+                    <button type="button" class="btn-demo-sample" data-sample="pothole">Use Pothole Photo</button>
+                    <button type="button" class="btn-demo-sample" data-sample="garbage">Use Waste Bin Photo</button>
+                    <button type="button" class="btn-demo-sample" data-sample="streetlight">Use Dark Streetlight Photo</button>
+                    <button type="button" class="btn-demo-sample" data-sample="water">Use Water Leak Photo</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="wizard-btn-row">
+                <button type="button" class="btn btn-secondary" id="step2BackBtn">&larr; Back to Location</button>
+                <button type="button" class="btn btn-primary btn-pill-lg" id="step2NextBtn">Generate AI Complaint Draft &rarr;</button>
+              </div>
+            </div>
+
+            <!-- --------------------------------------- -->
+            <!-- STEP 3: "AI-Generated Complaint"       -->
+            <!-- --------------------------------------- -->
+            <div class="wizard-step-pane" id="stepPane3">
+              <!-- Motivational Banner -->
+              <div class="wizard-motivational-banner">
+                <div class="wmb-left">
+                  <span class="wmb-step-counter">03 / 04</span>
+                  <h3 class="wmb-title">AI-Generated Municipal Complaint Draft</h3>
+                  <p class="wmb-sub">CitySaathi AI drafts an objective, actionable complaint for municipal engineers using your location and observations. Review and edit every word before submitting.</p>
+                </div>
+                <div class="wmb-badge">
+                  <span id="aiEngineBannerBadge">✨ Powered by Google Gemini</span>
+                </div>
+              </div>
+
+              <div class="pane-headline">
+                <span class="step-number-tag">STEP 3</span>
+                <h3>AI-Generated Complaint Draft</h3>
+                <p>Review and edit CitySaathi AI's structured draft before proceeding to final review.</p>
+              </div>
+
+              <!-- AI Draft Loading State -->
+              <div class="ai-draft-loading hidden" id="aiDraftLoading">
+                <div class="ai-loading-card">
+                  <div class="spinner-gemini"></div>
+                  <h4 class="loading-title">✨ Gemini AI is drafting your complaint...</h4>
+                  <p class="loading-sub">Analyzing your observations with location context to draft a concise, actionable report for municipal field crews.</p>
+                </div>
+              </div>
+
+              <!-- AI Draft Result Container -->
+              <div class="ai-draft-container" id="aiDraftResult">
+                <!-- Meta Status Bar -->
+                <div class="ai-draft-meta-bar">
+                  <div class="adm-left">
+                    <span class="badge-gemini" id="aiDraftEngineBadge">✨ Google Gemini AI</span>
+                    <span class="badge-outline" id="aiDraftConfidenceBadge">Verified Observation</span>
+                  </div>
+                  <button type="button" class="btn btn-ghost btn-xs" id="regenerateAiDraftBtn">
+                    <span>🔄 Regenerate Draft</span>
+                  </button>
+                </div>
+
+                <!-- Fallback Alert Box (Shown only if Gemini is offline/unconfigured) -->
+                <div class="ai-fallback-alert hidden" id="aiDraftFallbackAlert">
+                  <span class="afa-icon">ℹ️</span>
+                  <div class="afa-content">
+                    <strong id="aiDraftFallbackTitle">Local Rule Engine Draft Active</strong>
+                    <p id="aiDraftFallbackText">Gemini API is unavailable; draft created using CitySaathi local templates. You can freely edit or retry.</p>
+                  </div>
+                  <button type="button" class="btn btn-outline btn-xs" id="retryAiDraftBtn">Retry AI</button>
+                </div>
+
+                <!-- Editable Form Group: Title -->
+                <div class="form-group">
+                  <label for="formTitle" class="form-label">
+                    Complaint Title <span class="required">*</span>
+                    <span class="field-hint">(AI-generated, fully editable)</span>
+                  </label>
+                  <input type="text" id="formTitle" class="form-control" maxlength="120" required
+                    placeholder="Concise, actionable complaint title">
+                </div>
+
+                <!-- Editable Form Group: Official Complaint Message -->
+                <div class="form-group">
+                  <label for="formComplaintMessage" class="form-label">
+                    Official Complaint Message <span class="required">*</span>
+                    <span class="field-hint">(AI-generated, fully editable for municipal field crew)</span>
+                  </label>
+                  <textarea id="formComplaintMessage" class="form-control" rows="4" maxlength="600" required
+                    placeholder="Clear, professional municipal complaint text"></textarea>
+                </div>
+
+                <!-- Structured Triage Metadata Grid -->
+                <div class="ai-factors-grid">
+                  <div class="ai-factor-item">
+                    <span class="ai-factor-label">Categorized As</span>
+                    <strong class="ai-factor-value" id="aiDetectedCat">Road / Pothole</strong>
+                  </div>
+                  <div class="ai-factor-item">
+                    <span class="ai-factor-label">Suggested Priority</span>
+                    <strong class="ai-factor-value priority-badge-high" id="aiDetectedPriority">High Priority</strong>
+                  </div>
+                  <div class="ai-factor-item">
+                    <span class="ai-factor-label">Assigned Body</span>
+                    <strong class="ai-factor-value" id="aiDetectedAgency">BBMP Infrastructure</strong>
+                  </div>
+                  <div class="ai-factor-item">
+                    <span class="ai-factor-label">Target SLA</span>
+                    <strong class="ai-factor-value" id="aiDetectedSLA">48 Hours</strong>
+                  </div>
+                </div>
+
+                <!-- Priority Rationale Explainer -->
+                <div class="ai-rationale-card">
+                  <div class="arc-header">
+                    <span class="arc-icon">💡</span>
+                    <strong>Priority Rationale & Municipal Assessment</strong>
+                  </div>
+                  <p class="arc-body" id="aiDraftReasonText">Assessed based on reported civic conditions and municipal priority guidelines.</p>
+                </div>
+
+                <!-- Duplicate Detection Alert Panel (Appears if similar complaint found) -->
+                <div class="ai-duplicate-alert hidden" id="aiDuplicateAlert">
+                  <div class="duplicate-header">
+                    <span class="dup-alert-icon">⚠️</span>
+                    <div>
+                      <strong>Possible Duplicate Issue Detected Nearby</strong>
+                      <p id="duplicateDescText">Citizens have already reported a similar hazard in this area.</p>
+                    </div>
+                  </div>
+                  <div class="duplicate-item-preview" id="duplicatePreviewBox">
+                    <span class="dup-id">CS-2026-00084</span>
+                    <span class="dup-title">Crater pothole near metro bridge</span>
+                    <span class="dup-meta">120m away • In Progress</span>
+                    <button type="button" class="btn btn-outline btn-xs" id="viewSimilarBtn">View Similar Report</button>
+                  </div>
+                  <div class="duplicate-actions-row">
+                    <span class="dup-help">To avoid split work orders, you can upvote the existing ticket or submit this as a unique case.</span>
+                    <button type="button" class="btn btn-secondary btn-sm" id="dismissDuplicateBtn">Continue as Separate Issue</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="wizard-btn-row">
+                <button type="button" class="btn btn-secondary" id="step3BackBtn">&larr; Back to Details</button>
+                <button type="button" class="btn btn-primary btn-pill-lg" id="step3NextBtn">Review & Submit &rarr;</button>
+              </div>
+            </div>
+
+            <!-- --------------------------------------- -->
+            <!-- STEP 4: "Review & Submit"               -->
+            <!-- --------------------------------------- -->
+            <div class="wizard-step-pane" id="stepPane4">
+              <div class="pane-headline">
+                <span class="step-number-tag">STEP 4</span>
+                <h3>Review & Final Submission</h3>
+                <p>Verify all details before submitting your complaint to the BBMP municipal grievance grid.</p>
+              </div>
+
+              <!-- Multi-Section Review Cards with Edit Links -->
+              <div class="review-sections-stack">
+                <!-- Section 1: Location -->
+                <div class="review-section-box">
+                  <div class="rsb-header">
+                    <div class="rsb-title">
+                      <span class="rsb-icon">📍</span>
+                      <h4>1. Location & Ward</h4>
+                    </div>
+                    <button type="button" class="btn btn-text-link btn-xs" onclick="window.CitySaathiApp.goToWizardStep(1)">Edit Location</button>
+                  </div>
+                  <div class="rsb-grid">
+                    <div><span class="rsb-label">Street / Landmark:</span> <strong id="sumLocation">100 Feet Rd, Indiranagar</strong></div>
+                    <div><span class="rsb-label">Ward / Zone:</span> <strong id="sumWard">Indiranagar (Ward 112)</strong></div>
+                    <div><span class="rsb-label">GPS Coordinates:</span> <span class="coord-tag" id="sumCoords">12.9784° N, 77.6408° E</span></div>
+                  </div>
+                </div>
+
+                <!-- Section 2: Issue Details & Citizen Observation -->
+                <div class="review-section-box">
+                  <div class="rsb-header">
+                    <div class="rsb-title">
+                      <span class="rsb-icon">📝</span>
+                      <h4>2. Issue Details & Observation</h4>
+                    </div>
+                    <button type="button" class="btn btn-text-link btn-xs" onclick="window.CitySaathiApp.goToWizardStep(2)">Edit Details</button>
+                  </div>
+                  <div class="rsb-grid">
+                    <div><span class="rsb-label">Category:</span> <strong id="sumCategory">Road / Pothole</strong></div>
+                    <div><span class="rsb-label">Suggested Priority:</span> <strong id="sumPriority" class="priority-badge-urgent">High Priority</strong></div>
+                    <div class="rsb-full"><span class="rsb-label">Citizen's Original Observation:</span> <p id="sumObservation" class="rsb-quote">Deep road crater causing vehicles to swerve suddenly.</p></div>
+                  </div>
+                </div>
+
+                <!-- Section 3: Official Complaint Text -->
+                <div class="review-section-box">
+                  <div class="rsb-header">
+                    <div class="rsb-title">
+                      <span class="rsb-icon">🏛️</span>
+                      <h4>3. Official Municipal Report</h4>
+                    </div>
+                    <button type="button" class="btn btn-text-link btn-xs" onclick="window.CitySaathiApp.goToWizardStep(3)">Edit Draft</button>
+                  </div>
+                  <div class="rsb-body">
+                    <div class="rsb-field">
+                      <span class="rsb-label">Official Title:</span>
+                      <strong id="sumTitle" class="rsb-highlight-title">Large crater pothole on 100ft road</strong>
+                    </div>
+                    <div class="rsb-field">
+                      <span class="rsb-label">Actionable Complaint Message:</span>
+                      <p id="sumDescription" class="rsb-highlight-msg">Deep road crater causing vehicles to swerve suddenly.</p>
+                    </div>
+                    <div class="rsb-field">
+                      <span class="rsb-label">Dispatched Agency:</span>
+                      <span class="dept-badge" id="sumDept">BBMP Infrastructure</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Section 4: Photographic Evidence -->
+                <div class="review-section-box">
+                  <div class="rsb-header">
+                    <div class="rsb-title">
+                      <span class="rsb-icon">📷</span>
+                      <h4>4. Photographic Evidence</h4>
+                    </div>
+                    <button type="button" class="btn btn-text-link btn-xs" onclick="window.CitySaathiApp.goToWizardStep(2)">Edit Photo</button>
+                  </div>
+                  <div id="sumEvidenceBox" class="rsb-evidence-box">
+                    <span id="sumEvidenceText">No photo attached</span>
+                    <img id="sumEvidenceImg" src="" alt="Photo evidence" class="rsb-evidence-img hidden">
+                  </div>
+                </div>
+              </div>
+
+              <div class="wizard-btn-row">
+                <button type="button" class="btn btn-secondary" id="step4BackBtn">&larr; Back to AI Draft</button>
+                <button type="submit" class="btn btn-primary btn-lg" id="submitComplaintBtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Submit Complaint</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- 3D SUCCESS CONFIRMATION MODAL -->
+        <div class="modal-backdrop" id="successModal">
+          <div class="modal-box modal-success-box">
+            
+            <!-- 3D Celebration Badge Animation -->
+            <div class="success-3d-badge">
+              <div class="success-check-circle">
+                <svg viewBox="0 0 48 48" fill="none">
+                  <circle cx="24" cy="24" r="22" fill="#10B981"/>
+                  <polyline points="14 24 21 31 34 18" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="confetti-sparks">
+                <span class="spark s1"></span>
+                <span class="spark s2"></span>
+                <span class="spark s3"></span>
+                <span class="spark s4"></span>
+              </div>
+            </div>
+
+            <h3 class="success-title">Complaint Registered!</h3>
+            <p class="success-text">Your issue has been routed to the relevant municipal operations cell.</p>
+            
+            <div class="ticket-receipt-card">
+              <div class="receipt-row">
+                <span class="receipt-label">Complaint ID:</span>
+                <strong class="receipt-code" id="successTicketId">CS-2026-00124</strong>
+              </div>
+              <div class="receipt-row">
+                <span class="receipt-label">Category:</span>
+                <span id="successCategory">Road / Pothole</span>
+              </div>
+              <div class="receipt-row">
+                <span class="receipt-label">Target SLA:</span>
+                <span>Within 48 Hours</span>
+              </div>
+              <div class="receipt-row">
+                <span class="receipt-label">Assigned Cell:</span>
+                <span id="successDept">BBMP Infrastructure</span>
+              </div>
+            </div>
+
+            <div class="modal-success-actions">
+              <button class="btn btn-primary btn-lg full-width" id="successTrackBtn">
+                <span>Track Complaint Progress &rarr;</span>
+              </button>
+              <button class="btn btn-secondary full-width" id="successNewReportBtn">
+                <span>Submit Another Issue</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- VIEW 3: COMPLAINT TRACKING & CITIZEN TIMELINE   -->
+    <!-- ============================================== -->
+    <section class="view-section" id="view-tracking">
+      <div class="section-container">
+        
+        <div class="tracking-top-bar">
+          <div>
+            <span class="eyebrow-tag">LIVE ISSUE TRACKER</span>
+            <h2 class="view-heading">Track Civic Complaints</h2>
+            <p class="view-subheading">Monitor real-time repair stages, department SLAs, and verify completed works.</p>
+          </div>
+
+          <!-- Quick Search Bar by Complaint ID -->
+          <div class="tracking-search-box">
+            <input type="text" id="trackingSearchInput" class="form-control" placeholder="Search by Complaint ID (e.g. CS-2026-00084)">
+            <button class="btn btn-primary" id="trackingSearchBtn">Find Ticket</button>
+          </div>
+        </div>
+
+        <div class="tracking-layout-grid">
+          
+          <!-- Left: Complaints Selector List -->
+          <div class="tracking-list-col">
+            <div class="card selector-card">
+              <div class="selector-header">
+                <h3 class="selector-title">Your Complaints</h3>
+                <div class="filter-pills-row" id="trackingStatusFilters">
+                  <button class="filter-chip active" data-filter="all">All (<span id="countAll">0</span>)</button>
+                  <button class="filter-chip" data-filter="active">Active (<span id="countActive">0</span>)</button>
+                  <button class="filter-chip" data-filter="resolved">Resolved (<span id="countResolved">0</span>)</button>
+                </div>
+              </div>
+
+              <div class="tracking-items-feed" id="trackingItemsFeed">
+                <!-- Populated via JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Detailed Tracking Timeline & Verification Card -->
+          <div class="tracking-detail-col">
+            <div class="card detail-card" id="trackingDetailCard">
+              <!-- Rendered dynamically by renderTrackingDetail(complaint) -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- VIEW 4: LIVE CITY MAP                          -->
+    <!-- ============================================== -->
+    <section class="view-section" id="view-map">
+      <div class="map-view-container">
+        
+        <!-- Floating Map Filter Bar -->
+        <div class="map-filter-bar">
+          <div class="map-search-group">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="map-search-icon"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="mapSearchFilter" placeholder="Filter by area (Indiranagar, Koramangala...)" class="map-search-input">
+          </div>
+          
+          <div class="map-category-pills" id="mapCategoryFilters">
+            <button class="map-pill active" data-cat="all">All Issues</button>
+            <button class="map-pill" data-cat="Road / Pothole">🕳️ Roads</button>
+            <button class="map-pill" data-cat="Garbage / Waste">🗑️ Waste</button>
+            <button class="map-pill" data-cat="Streetlight">💡 Lighting</button>
+            <button class="map-pill" data-cat="Water / Drainage">💧 Drainage</button>
+          </div>
+
+          <div class="map-legend-items">
+            <span class="legend-badge leg-critical"><span class="leg-dot"></span> Critical</span>
+            <span class="legend-badge leg-inprogress"><span class="leg-dot"></span> In Progress</span>
+            <span class="legend-badge leg-resolved"><span class="leg-dot"></span> Resolved</span>
+          </div>
+        </div>
+
+        <!-- Leaflet Map Canvas -->
+        <div id="citySaathiMap" class="city-map-canvas"></div>
+
+        <!-- Floating Map Layers Panel (Matching Screen 3) -->
+        <div class="map-layers-panel" id="mapLayersPanel">
+          <div class="mlp-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mlp-icon"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            <strong>Layers</strong>
+          </div>
+          <div class="mlp-list">
+            <label class="mlp-item">
+              <input type="checkbox" checked data-filter="all" id="layerFilterAll">
+              <span class="mlp-chip chip-all"></span>
+              <span class="mlp-name">All Issues</span>
+            </label>
+            <label class="mlp-item">
+              <input type="checkbox" checked data-filter="Road / Pothole" id="layerFilterRoad">
+              <span class="mlp-chip chip-red"></span>
+              <span class="mlp-name">Potholes</span>
+            </label>
+            <label class="mlp-item">
+              <input type="checkbox" checked data-filter="Garbage / Waste" id="layerFilterWaste">
+              <span class="mlp-chip chip-green"></span>
+              <span class="mlp-name">Garbage</span>
+            </label>
+            <label class="mlp-item">
+              <input type="checkbox" checked data-filter="Streetlight" id="layerFilterLight">
+              <span class="mlp-chip chip-cyan"></span>
+              <span class="mlp-name">Streetlights</span>
+            </label>
+            <label class="mlp-item">
+              <input type="checkbox" checked data-filter="Water / Drainage" id="layerFilterWater">
+              <span class="mlp-chip chip-amber"></span>
+              <span class="mlp-name">Drainage</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Floating Quick Marker Details Card -->
+        <div class="map-quick-card hidden" id="mapQuickCard">
+          <button class="quick-card-close" id="closeQuickCardBtn">&times;</button>
+          <div class="quick-card-content" id="quickCardContent">
+            <!-- Populated via JS on marker click -->
+          </div>
+        </div>
+
+        <!-- Bottom Horizontal Nearby Issues Carousel (Screen 3) -->
+        <div class="map-bottom-carousel-wrapper" id="nearbyCarouselWrapper">
+          <div class="carousel-bar-header">
+            <div class="cbh-left">
+              <span class="cbh-pulse-dot"></span>
+              <span class="cbh-title">Nearby Civic Reports in Bengaluru</span>
+              <span class="cbh-count" id="carouselCountBadge">(Loading...)</span>
+            </div>
+            <span class="cbh-hint">Click any card to fly to location</span>
+          </div>
+          <div class="nearby-issues-carousel" id="nearbyIssuesCarousel">
+            <!-- Dynamically populated from active complaints list -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- VIEW 5: COMMUNITY IMPACT & WARD HEALTH         -->
+    <!-- ============================================== -->
+    <section class="view-section" id="view-community">
+      <div class="section-container">
+        
+        <div class="view-header">
+          <span class="eyebrow-tag">COMMUNITY INTELLIGENCE</span>
+          <h2 class="view-heading">Bengaluru Ward Health & Impact</h2>
+          <p class="view-subheading">
+            Independent, crowdsourced neighbourhood scores tracking infrastructure quality, resolution responsiveness, and civic engagement.
+          </p>
+          <div class="disclaimer-badge">
+            ℹ️ <strong>Note:</strong> Computed transparently by CitySaathi based on verified turnaround times and citizen satisfaction ratings.
+          </div>
+        </div>
+
+        <!-- Ward Selector & Score Overview -->
+        <div class="ward-selector-row">
+          <div class="form-group ward-select-group">
+            <label for="communityWardSelect" class="form-label">Select Bengaluru Ward:</label>
+            <select id="communityWardSelect" class="form-control">
+              <option value="indiranagar">Indiranagar — Ward 112 (East Zone)</option>
+              <option value="koramangala">Koramangala — Ward 151 (South Zone)</option>
+              <option value="whitefield">Whitefield — Ward 84 (Mahadevapura)</option>
+              <option value="hsr">HSR Layout — Ward 174 (Bommanahalli)</option>
+              <option value="jayanagar">Jayanagar — Ward 153 (South Zone)</option>
+            </select>
+          </div>
+
+          <div class="ward-main-score-pill">
+            <div class="wm-left">
+              <span class="wm-ward" id="scoreWardName">Indiranagar Ward 112</span>
+              <span class="wm-status" id="scoreWardStatus">Grade A • High Civic Health</span>
+            </div>
+            <div class="wm-right">
+              <span class="wm-score" id="scoreWardPoints">84</span>
+              <span class="wm-sub">/100</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Core Sub-Scores Breakdown -->
+        <div class="ward-breakdown-grid" id="wardBreakdownGrid">
+          <!-- Card 1: Roads -->
+          <div class="breakdown-card">
+            <div class="bc-head">
+              <div class="bc-icon icon-blue">🕳️</div>
+              <div>
+                <h4>Roads & Footpaths</h4>
+                <p>Surface quality & pothole repairs</p>
+              </div>
+            </div>
+            <div class="bc-meter-wrap">
+              <div class="bc-bar"><div class="bc-fill fill-amber" style="width: 76%;"></div></div>
+              <span class="bc-value">76 / 100</span>
+            </div>
+            <span class="bc-note">14 potholes cleared this month</span>
+          </div>
+
+          <!-- Card 2: Waste -->
+          <div class="breakdown-card">
+            <div class="bc-head">
+              <div class="bc-icon icon-green">🗑️</div>
+              <div>
+                <h4>Garbage & Cleanliness</h4>
+                <p>Bin clearance & blackspot remediation</p>
+              </div>
+            </div>
+            <div class="bc-meter-wrap">
+              <div class="bc-bar"><div class="bc-fill fill-green" style="width: 92%;"></div></div>
+              <span class="bc-value">92 / 100</span>
+            </div>
+            <span class="bc-note">Daily segregation compliance: 88%</span>
+          </div>
+
+          <!-- Card 3: Lighting -->
+          <div class="breakdown-card">
+            <div class="bc-head">
+              <div class="bc-icon icon-amber">💡</div>
+              <div>
+                <h4>Streetlight Uptime</h4>
+                <p>Nighttime safety illumination</p>
+              </div>
+            </div>
+            <div class="bc-meter-wrap">
+              <div class="bc-bar"><div class="bc-fill fill-green" style="width: 89%;"></div></div>
+              <span class="bc-value">89 / 100</span>
+            </div>
+            <span class="bc-note">Average dark stretch fix: 22 hrs</span>
+          </div>
+
+          <!-- Card 4: Water & Drainage -->
+          <div class="breakdown-card">
+            <div class="bc-head">
+              <div class="bc-icon icon-purple">💧</div>
+              <div>
+                <h4>Water & Drainage</h4>
+                <p>SWD clearance & supply stability</p>
+              </div>
+            </div>
+            <div class="bc-meter-wrap">
+              <div class="bc-bar"><div class="bc-fill fill-blue" style="width: 81%;"></div></div>
+              <span class="bc-value">81 / 100</span>
+            </div>
+            <span class="bc-note">Storm drains desilted before rains</span>
+          </div>
+        </div>
+
+        <!-- Community Leaderboard & Active Saathis -->
+        <div class="community-stats-grid">
+          <div class="card community-panel">
+            <h3 class="panel-title">🏆 Top Active Saathis this Month</h3>
+            <p class="panel-subtitle">Neighbourhood champions reporting, verifying, and tracking civic issues</p>
+            <div class="leaderboard-list">
+              <div class="leaderboard-item">
+                <span class="lb-rank">1</span>
+                <div class="lb-avatar">AR</div>
+                <div class="lb-info">
+                  <strong>Ananya Rao</strong>
+                  <span>Indiranagar • 28 issues verified</span>
+                </div>
+                <span class="lb-points">740 pts</span>
+              </div>
+              <div class="leaderboard-item">
+                <span class="lb-rank">2</span>
+                <div class="lb-avatar">VK</div>
+                <div class="lb-info">
+                  <strong>Vikram Kulkarni</strong>
+                  <span>Koramangala • 22 issues verified</span>
+                </div>
+                <span class="lb-points">610 pts</span>
+              </div>
+              <div class="leaderboard-item">
+                <span class="lb-rank">3</span>
+                <div class="lb-avatar">SM</div>
+                <div class="lb-info">
+                  <strong>Sneha Murthy</strong>
+                  <span>HSR Layout • 19 issues verified</span>
+                </div>
+                <span class="lb-points">530 pts</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Citizen Impact Perks -->
+          <div class="card community-panel">
+            <h3 class="panel-title">🌟 Saathi Karma Rewards</h3>
+            <p class="panel-subtitle">Earn badges and civic recognition as you improve your ward</p>
+            <div class="badges-row">
+              <div class="badge-card">
+                <span class="badge-icon-lg">🛡️</span>
+                <strong>Civic Guardian</strong>
+                <span>Submit 5 verified reports</span>
+              </div>
+              <div class="badge-card">
+                <span class="badge-icon-lg">🔍</span>
+                <strong>Eagle Eye</strong>
+                <span>Verify 10 resolved repairs</span>
+              </div>
+              <div class="badge-card">
+                <span class="badge-icon-lg">🌱</span>
+                <strong>Clean Street Hero</strong>
+                <span>Report 3 cleared blackspots</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- VIEW 6: AUTHORITY DASHBOARD ("CITY OPERATIONS") -->
+    <!-- ============================================== -->
+    <section class="view-section" id="view-authority">
+      <div class="section-container">
+        
+        <!-- Authority Header -->
+        <div class="authority-header">
+          <div class="auth-title-block">
+            <div class="auth-agency-badge">
+              <span class="gov-seal">🏛️</span>
+              <span>BENGALURU MUNICIPAL OPERATIONS CELL (BBMP / SMART CITY)</span>
+            </div>
+            <h2 class="view-heading">City Operations Command Center</h2>
+            <p class="view-subheading">Real-time triage, field crew assignment, duplicate consolidation, and repair evidence management.</p>
+          </div>
+          
+          <div class="auth-quick-actions">
+            <button class="btn btn-outline" id="authRefreshBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              <span>Refresh Queue</span>
+            </button>
+            <button class="btn btn-primary" id="openDuplicateGroupsBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+              <span>Duplicate Groups (<span id="dupGroupCount">2</span>)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5 Authority KPI Cards (Clickable to Filter Operations Queue) -->
+        <div class="authority-kpi-grid">
+          <div class="card auth-kpi-card" data-kpi-filter="all" title="Click to view all complaints">
+            <span class="auth-kpi-label">TOTAL ISSUES</span>
+            <div class="auth-kpi-val" id="authKpiTotal">0</div>
+            <div class="auth-kpi-trend text-blue">Across 8 Bengaluru zones</div>
+          </div>
+          <div class="card auth-kpi-card" data-kpi-filter="active" title="Click to filter by Assigned / In Progress">
+            <span class="auth-kpi-label">ACTIVE FIELD ISSUES</span>
+            <div class="auth-kpi-val text-amber" id="authKpiActive">0</div>
+            <div class="auth-kpi-trend text-amber">Assigned / Work in progress</div>
+          </div>
+          <div class="card auth-kpi-card" data-kpi-filter="critical" title="Click to filter by Critical priority">
+            <span class="auth-kpi-label">CRITICAL SEVERITY</span>
+            <div class="auth-kpi-val text-danger" id="authKpiCritical">0</div>
+            <div class="auth-kpi-trend text-danger">Requires &lt; 24h dispatch</div>
+          </div>
+          <div class="card auth-kpi-card" data-kpi-filter="resolved" title="Click to filter by Resolved & Verified">
+            <span class="auth-kpi-label">RESOLVED THIS MONTH</span>
+            <div class="auth-kpi-val text-green" id="authKpiResolved">0</div>
+            <div class="auth-kpi-trend text-green">Work completed</div>
+          </div>
+          <div class="card auth-kpi-card" data-kpi-filter="pending-verif" title="Click to filter by Pending Citizen Verification">
+            <span class="auth-kpi-label">PENDING VERIFICATION</span>
+            <div class="auth-kpi-val text-purple" id="authKpiPendingVerif">0</div>
+            <div class="auth-kpi-trend text-purple">Awaiting citizen sign-off</div>
+          </div>
+        </div>
+
+        <!-- Active Filter Indicator Banner -->
+        <div class="active-filter-indicator hidden" id="activeFilterIndicator">
+          <span id="activeFilterText">Filtered by: Critical Severity</span>
+          <button type="button" class="btn-clear-kpi" id="clearKpiFilterBtn" title="Reset filter to all">Clear filter &times;</button>
+        </div>
+
+        <!-- Interactive Charts Row (3-Column Analytics Layout) -->
+        <div class="authority-charts-grid">
+          <!-- Chart 1: Issues by Category -->
+          <div class="card chart-card" id="cardCategoryChart">
+            <div class="chart-header">
+              <div>
+                <h4>Complaints by Category</h4>
+                <span class="chart-subtitle">Real-time volume distribution</span>
+              </div>
+              <span class="chart-tag">Interactive Donut</span>
+            </div>
+            <div class="chart-canvas-wrapper" style="position: relative;">
+              <canvas id="categoryChart" width="340" height="200"></canvas>
+              <div class="chart-tooltip" id="categoryChartTooltip"></div>
+            </div>
+            <div class="chart-legend-grid" id="categoryLegendGrid"></div>
+          </div>
+
+          <!-- Chart 2: Priority / Severity Breakdown -->
+          <div class="card chart-card" id="cardPriorityChart">
+            <div class="chart-header">
+              <div>
+                <h4>Severity Breakdown</h4>
+                <span class="chart-subtitle">Risk profile across city</span>
+              </div>
+              <span class="chart-tag">Priority</span>
+            </div>
+            <div class="severity-bars-container" id="severityBarsContainer"></div>
+          </div>
+
+          <!-- Chart 3: 7-Day Resolution Velocity -->
+          <div class="card chart-card" id="cardTrendChart">
+            <div class="chart-header">
+              <div>
+                <h4>Resolution Velocity</h4>
+                <span class="chart-subtitle">7-Day turnaround trend</span>
+              </div>
+              <span class="chart-tag">SLA Trend</span>
+            </div>
+            <div class="velocity-chart-wrapper" style="position: relative;">
+              <canvas id="trendChart" width="340" height="170"></canvas>
+              <div class="chart-tooltip" id="trendChartTooltip"></div>
+            </div>
+            <div class="velocity-metrics-bar">
+              <span>Avg Turnaround: <strong class="text-green" id="avgSlaDisplay">28.4h</strong></span>
+              <span>7-Day Fixed: <strong class="text-blue" id="sevenDayTotalDisplay">0 issues</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Smart Duplicate Detection Hub -->
+        <div class="card duplicate-hub-card" id="duplicateHubSection">
+          <div class="dh-header">
+            <div>
+              <div class="dh-eyebrow-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span class="eyebrow-tag">SMART DUPLICATE CONSOLIDATION</span>
+                <span class="badge badge-sm badge-info" id="dupConfidenceBadge">94% Geo-Similarity</span>
+              </div>
+              <h3 class="dh-title" id="dupGroupTitle">Potential Duplicate Group (#MI-2026-001)</h3>
+              <p class="dh-subtitle" id="dupGroupSubtitle">Multiple citizen reports refer to the same road crater along 100ft Road corridor in Indiranagar.</p>
+            </div>
+            <div class="dh-actions">
+              <button class="btn btn-primary btn-sm" id="mergeDuplicatesBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>
+                <span>Merge Reports into Master Ticket</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="keepSeparateBtn">Keep Separate</button>
+            </div>
+          </div>
+          <div class="dh-preview-list" id="dupPreviewList">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Master Ticket Operations Filter Bar & Table -->
+        <div class="card ticket-ops-card">
+          <div class="ticket-ops-header">
+            <div>
+              <h3 class="panel-title">Active Civic Operations Queue</h3>
+              <p class="panel-subtitle">Manage ticket assignment, status progression, and repair evidence uploads</p>
+            </div>
+            
+            <!-- Real-time Search Box & Export -->
+            <div class="ops-controls-right" style="display: flex; align-items: center; gap: 10px;">
+              <div class="search-input-wrap">
+                <input type="text" id="opsSearchInput" class="form-control form-control-sm" placeholder="Search ticket ID, title, ward..." style="min-width: 200px;">
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" id="exportQueueBtn" title="Export queue to CSV">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Filters -->
+          <div class="ops-filter-row">
+            <select id="opsWardFilter" class="form-control form-control-sm">
+              <option value="all">All Wards</option>
+              <option value="Indiranagar">Indiranagar</option>
+              <option value="Koramangala">Koramangala</option>
+              <option value="Whitefield">Whitefield</option>
+              <option value="HSR Layout">HSR Layout</option>
+              <option value="Jayanagar">Jayanagar</option>
+              <option value="Malleshwaram">Malleshwaram</option>
+              <option value="Bellandur">Bellandur</option>
+              <option value="BTM Layout">BTM Layout</option>
+              <option value="Marathahalli">Marathahalli</option>
+              <option value="Basavanagudi">Basavanagudi</option>
+              <option value="MG Road">MG Road</option>
+            </select>
+
+            <select id="opsCategoryFilter" class="form-control form-control-sm">
+              <option value="all">All Categories</option>
+              <option value="Road / Pothole">Roads & Potholes</option>
+              <option value="Garbage / Waste">Garbage & Waste</option>
+              <option value="Streetlight">Streetlight</option>
+              <option value="Water / Drainage">Water & Drainage</option>
+              <option value="Public Amenities">Public Amenities</option>
+            </select>
+
+            <select id="opsPriorityFilter" class="form-control form-control-sm">
+              <option value="all">All Priorities</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+
+            <select id="opsStatusFilter" class="form-control form-control-sm">
+              <option value="all">All Statuses</option>
+              <option value="Submitted">Submitted</option>
+              <option value="Assigned">Assigned</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Resolved">Resolved</option>
+              <option value="Verified">Verified</option>
+            </select>
+          </div>
+
+          <!-- Operations Data Table -->
+          <div class="ops-table-responsive">
+            <table class="ops-table">
+              <thead>
+                <tr>
+                  <th>Ticket ID</th>
+                  <th>Issue Details</th>
+                  <th>Category</th>
+                  <th>Ward / Area</th>
+                  <th>Priority</th>
+                  <th>Assigned Agency</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="opsTableBody">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================== -->
+  <!-- MODALS & SLIDE-OUT DRAWERS                     -->
+  <!-- ============================================== -->
+
+  <!-- 1. AUTHORITY TICKET MANAGEMENT DRAWER / MODAL -->
+  <div class="modal-backdrop" id="authorityModal">
+    <div class="modal-box modal-wide-box">
+      <div class="modal-header">
+        <div class="mh-title-wrap">
+          <span class="modal-badge-id" id="modalTicketId">CS-2026-00084</span>
+          <h3 class="modal-title" id="modalTicketTitle">Issue Title</h3>
+        </div>
+        <button class="modal-close" id="closeAuthorityModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body auth-modal-body">
+        <div class="auth-modal-grid">
+          
+          <!-- Left: Issue Details & Evidence -->
+          <div class="auth-modal-left">
+            <div class="auth-detail-block">
+              <span class="adb-label">Description:</span>
+              <p class="adb-text" id="modalTicketDesc">Detailed description...</p>
+            </div>
+
+            <div class="auth-detail-block">
+              <span class="adb-label">Location:</span>
+              <p class="adb-text" id="modalTicketLocation">100ft Road, Indiranagar</p>
+            </div>
+
+            <div class="auth-detail-block" id="modalPriorityReasonBlock">
+              <span class="adb-label">AI Priority Rationale:</span>
+              <p class="adb-text" id="modalPriorityReasonText" style="font-size: 0.82rem; color: var(--primary-dark, #1D4ED8);"></p>
+            </div>
+
+            <!-- Citizen Before Evidence Photo -->
+            <div class="auth-detail-block">
+              <span class="adb-label">Citizen Evidence (Before):</span>
+              <div class="evidence-thumb-container" id="modalBeforeEvidenceContainer">
+                <img id="modalBeforeEvidenceImg" src="" alt="Citizen evidence photo">
+              </div>
+            </div>
+
+            <!-- Repair After Evidence Section -->
+            <div class="auth-detail-block">
+              <span class="adb-label">Municipal Repair Evidence (After):</span>
+              <div class="repair-evidence-box" id="modalAfterEvidenceBox">
+                <img id="modalAfterEvidenceImg" src="" alt="Repair evidence photo" class="hidden">
+                <div class="upload-repair-controls" id="uploadRepairControls">
+                  <p class="text-muted">Attach photographic proof of completed repair work:</p>
+                  <input type="file" id="repairPhotoInput" accept="image/*" class="form-control">
+                  <button type="button" class="btn btn-secondary btn-sm" id="sampleAfterPhotoBtn">
+                    Use Sample After Photo
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="auth-detail-block">
+              <label for="repairNotesInput" class="adb-label">Resolution Work Notes:</label>
+              <textarea id="repairNotesInput" class="form-control" rows="2" placeholder="e.g. Cold-mix asphalt patch laid and compacted; road reopened for traffic."></textarea>
+            </div>
+          </div>
+
+          <!-- Right: Department Workflow Controls -->
+          <div class="auth-modal-right">
+            <div class="card status-action-card">
+              <h4 class="sac-title">Workflow Actions</h4>
+
+              <!-- Assigned Department -->
+              <div class="form-group">
+                <label for="modalAssignDept" class="form-label">Assigned Department</label>
+                <select id="modalAssignDept" class="form-control">
+                  <option value="BBMP Road Infrastructure">BBMP Road Infrastructure</option>
+                  <option value="Solid Waste Management (SWM)">Solid Waste Management (SWM)</option>
+                  <option value="BESCOM Electrical Cell">BESCOM Electrical Cell</option>
+                  <option value="BWSSB Water & Drainage">BWSSB Water & Drainage</option>
+                  <option value="BTP Traffic Engineering">BTP Traffic Engineering</option>
+                </select>
+              </div>
+
+              <!-- Assigned Field Officer -->
+              <div class="form-group">
+                <label for="modalAssignStaff" class="form-label">Field Staff / Engineer</label>
+                <select id="modalAssignStaff" class="form-control">
+                  <option value="AE Ramesh Kumar (Indiranagar Ward)">AE Ramesh Kumar (Indiranagar Ward)</option>
+                  <option value="JE Sneha Patil (Koramangala Ward)">JE Sneha Patil (Koramangala Ward)</option>
+                  <option value="Insp. C. Manjunath (SWM East)">Insp. C. Manjunath (SWM East)</option>
+                  <option value="Eng. Girish Rao (BESCOM E4)">Eng. Girish Rao (BESCOM E4)</option>
+                </select>
+              </div>
+
+              <!-- Priority Adjustment -->
+              <div class="form-group">
+                <label for="modalChangePriority" class="form-label">Priority</label>
+                <select id="modalChangePriority" class="form-control">
+                  <option value="Critical">Critical</option>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+
+              <!-- Current Status Update Buttons -->
+              <div class="action-buttons-stack">
+                <button type="button" class="btn btn-outline full-width" id="btnActionAssign">
+                  <span>1. Mark Assigned</span>
+                </button>
+                <button type="button" class="btn btn-secondary full-width" id="btnActionStartWork">
+                  <span>2. Start Field Work (In Progress)</span>
+                </button>
+                <button type="button" class="btn btn-primary full-width" id="btnActionResolve">
+                  <span>3. Resolve with Evidence</span>
+                </button>
+                <button type="button" class="btn btn-danger-outline full-width" id="btnActionReopen">
+                  <span>Reopen Ticket</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. GLOBAL SEARCH MODAL (Ctrl+K) -->
+  <div class="modal-backdrop" id="searchModal">
+    <div class="modal-box modal-search-box">
+      <div class="search-input-wrapper">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-box-icon"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="globalSearchInput" class="global-search-input" placeholder="Search by Complaint ID, keyword, location, or ward...">
+        <button class="search-modal-close" id="closeSearchModalBtn">&times;</button>
+      </div>
+
+      <div class="search-results-area" id="searchResultsArea">
+        <div class="search-empty-state">
+          Type to search complaints across Bengaluru (e.g. "pothole", "Indiranagar", "CS-2026")
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. CITIZEN PROFILE MODAL -->
+  <div class="modal-backdrop" id="profileModal">
+    <div class="modal-box modal-profile-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="profileModalHeaderTitle">CitySaathi Account & Session</h3>
+        <button class="modal-close" id="closeProfileModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- User Info Card -->
+        <div class="profile-card-top">
+          <div class="profile-avatar-large" id="profileAvatarText">CS</div>
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+              <h4 class="profile-display-name" id="profileDisplayName">Asha Raman</h4>
+              <span class="role-badge-pill role-badge-citizen" id="profileRoleBadge">Citizen</span>
+            </div>
+            <p class="profile-loc" id="profileEmailDisplay">citizen@citysaathi.in</p>
+            <p class="profile-loc" id="profileWardDisplay">📍 Indiranagar (Ward 112)</p>
+          </div>
+        </div>
+
+        <div class="profile-stats-grid">
+          <div class="ps-card">
+            <span class="ps-val" id="profileReportCount">0</span>
+            <span class="ps-label">Reported</span>
+          </div>
+          <div class="ps-card">
+            <span class="ps-val" id="profileResolvedCount">0</span>
+            <span class="ps-label">Resolved</span>
+          </div>
+          <div class="ps-card">
+            <span class="ps-val" id="profileKarmaScore">240</span>
+            <span class="ps-label">Karma Points</span>
+          </div>
+        </div>
+
+        <!-- Capstone Presentation Quick Switcher -->
+        <div class="demo-role-box">
+          <div class="demo-role-box-title">
+            <span>⚡ Capstone Role Switcher (One-Click)</span>
+          </div>
+          <div class="demo-role-buttons">
+            <button type="button" class="btn-role-switch active" id="demoCitizenBtn">
+              <strong>Citizen Account</strong>
+              <small>citizen@citysaathi.in</small>
+            </button>
+            <button type="button" class="btn-role-switch" id="demoAuthorityBtn">
+              <strong>BBMP Authority</strong>
+              <small>authority@bbmp.gov.in</small>
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Sign In / Sign Up Accordion -->
+        <div class="auth-section-wrapper">
+          <div class="auth-toggle-tabs">
+            <button type="button" class="auth-tab-link active" id="tabAuthLogin">Sign In</button>
+            <button type="button" class="auth-tab-link" id="tabAuthRegister">Create Account</button>
+            <button type="button" class="btn btn-xs btn-outline" id="authLogoutBtn" style="margin-left: auto;">Sign Out</button>
+          </div>
+
+          <!-- Sign In Form -->
+          <form id="authLoginForm" class="auth-inline-form">
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input type="email" id="loginEmail" class="form-control" required placeholder="name@example.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" id="loginPassword" class="form-control" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" id="loginSubmitBtn">Sign In to CitySaathi</button>
+          </form>
+
+          <!-- Register Form -->
+          <form id="authRegisterForm" class="auth-inline-form hidden">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" id="regName" class="form-control" required placeholder="e.g. Ramesh Kumar">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input type="email" id="regEmail" class="form-control" required placeholder="name@example.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password (min 6 characters)</label>
+              <input type="password" id="regPassword" class="form-control" required placeholder="••••••••">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Bengaluru Ward</label>
+              <input type="text" id="regWard" class="form-control" placeholder="e.g. Koramangala (Ward 151)">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" id="regSubmitBtn">Create Citizen Account</button>
+          </form>
+        </div>
+
+        <div class="profile-settings-block" style="margin-top: 18px;">
+          <h4 class="settings-title">Notification Preferences</h4>
+          <label class="setting-toggle-row">
+            <span>In-App & Email Civic Alerts</span>
+            <input type="checkbox" checked id="smsAlertsToggle">
+          </label>
+          <label class="setting-toggle-row">
+            <span>Citizen Verification Reminders</span>
+            <input type="checkbox" checked id="verifAlertsToggle">
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+    <button class="mob-nav-btn active" data-tab="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="mob-nav-btn" data-tab="report">
+      <div class="mob-plus-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <span>Report</span>
+    </button>
+    <button class="mob-nav-btn" data-tab="tracking">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+      <span>My Issues</span>
+    </button>
+    <button class="mob-nav-btn" data-tab="map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
+      <span>City Map</span>
+    </button>
+    <button class="mob-nav-btn" data-tab="authority">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11"/></svg>
+      <span>Operations</span>
+    </button>
+  </nav>
+
+  <!-- Global Toast Notifications Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Master Application Script -->
+  <script src="script.js"></script>
+</body>
+</html>

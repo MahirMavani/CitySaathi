@@ -1,0 +1,26 @@
+[build]
+  command = "npm run build"
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["prisma/**", "data/**", "uploads/**"]
+
+# Rewrite API routes to the Netlify serverless function
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# Rewrite upload routes to the Netlify serverless function
+[[redirects]]
+  from = "/uploads/*"
+  to = "/.netlify/functions/api/uploads/:splat"
+  status = 200
+
+# SPA navigation fallback for browser routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

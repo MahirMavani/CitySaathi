@@ -1,0 +1,30 @@
+{
+  "name": "civicresolveai_week5_prototype",
+  "version": "1.0.0",
+  "description": "> **“Your City. Your Voice. Your Saathi.”**   > *Report. Track. Resolve. Together.*",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "build": "prisma generate",
+    "postinstall": "prisma generate",
+    "seed": "node prisma/seed.js",
+    "test": "node --test test/api.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@google/genai": "^2.31.0",
+    "@prisma/client": "^6.4.1",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.5.0",
+    "prisma": "^6.4.1",
+    "serverless-http": "^4.0.0"
+  }
+}

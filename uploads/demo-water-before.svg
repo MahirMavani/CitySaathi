@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250" width="400" height="250">
+  <rect width="400" height="250" fill="#334155"/>
+  <rect x="80" y="140" width="240" height="30" rx="6" fill="#64748B"/>
+  <ellipse cx="200" cy="140" rx="20" ry="10" fill="#0284C7"/>
+  <path d="M190 140 C170 80 230 70 210 140" fill="#38BDF8" opacity="0.8"/>
+  <ellipse cx="200" cy="180" rx="90" ry="30" fill="#0284C7" opacity="0.6"/>
+  <rect x="15" y="15" width="130" height="28" rx="6" fill="rgba(239,68,68,0.9)"/>
+  <text x="80" y="34" fill="#FFFFFF" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">BEFORE REPAIR</text>
+</svg>

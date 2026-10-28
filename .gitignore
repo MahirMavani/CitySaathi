@@ -1,0 +1,56 @@
+# Environment variables & secrets
+.env
+.env*.local
+*.pem
+*.key
+
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# SQLite Database & Storage
+*.db-journal
+*.db-wal
+*.db-shm
+.backup*/
+
+# Dynamic uploads (preserve demo SVGs)
+uploads/*
+!uploads/demo-*.svg
+
+# Archives & Scratch
+*.zip
+scratch/
+CivicResolveAI_Week5/
+CitySaathi_*_Deployment/
+
+# Temporary Root Screenshots
+arcgis_*
+bengaluru_arcgis.jpg
+bengaluru_osm.png
+carto_dark_sample.png
+dash_*
+fastly_sample.png
+osm_*
+ref_*
+s2_*
+scratch_*
+user_*
+voyager_sample.png
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python virtual environment & caches
+ai-service/venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/

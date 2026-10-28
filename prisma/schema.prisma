@@ -1,0 +1,163 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "rhel-openssl-1.0.x", "debian-openssl-3.0.x"]
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("CITIZEN") // CITIZEN, AUTHORITY, ADMIN
+  phone        String?
+  ward         String?
+  karmaPoints  Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  complaints            Complaint[]            @relation("CitizenComplaints")
+  verifications         CitizenVerification[]
+  notifications         Notification[]
+  auditEvents           AuditEvent[]
+  statusChanges         ComplaintStatusHistory[] @relation("UserStatusChanges")
+}
+
+model Department {
+  id           Int      @id @default(autoincrement())
+  code         String   @unique
+  name         String
+  description  String?
+  contactEmail String?
+  createdAt    DateTime @default(now())
+
+  staff        Staff[]
+  complaints   Complaint[]
+  masterIssues MasterIssue[]
+}
+
+model Staff {
+  id           Int        @id @default(autoincrement())
+  name         String
+  roleTitle    String
+  email        String
+  phone        String?
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime   @default(now())
+
+  assignedComplaints Complaint[]
+}
+
+model MasterIssue {
+  id           Int         @id @default(autoincrement())
+  code         String      @unique // e.g. MI-2026-001
+  title        String
+  category     String
+  priority     String
+  status       String      @default("In Progress")
+  ward         String?
+  latitude     Float?
+  longitude    Float?
+  notes        String?
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  complaints   Complaint[]
+}
+
+model Complaint {
+  id              Int         @id @default(autoincrement())
+  complaintCode   String      @unique // e.g. CS-2026-00084
+  title           String
+  description     String
+  category        String      // Road / Pothole, Garbage / Waste, Streetlight, Water / Drainage, Public Amenities
+  priority        String      @default("Medium") // Critical, High, Medium, Low
+  priorityReason  String?
+  status          String      @default("Submitted") // Submitted, Under Review, Assigned, In Progress, Resolved, Verified, Rejected, Reopened
+  ward            String?
+  locationAddress String
+  latitude        Float?
+  longitude       Float?
+
+  citizenId       Int
+  citizen         User        @relation("CitizenComplaints", fields: [citizenId], references: [id])
+
+  departmentId    Int?
+  department      Department? @relation(fields: [departmentId], references: [id])
+
+  assignedStaffId Int?
+  assignedStaff   Staff?      @relation(fields: [assignedStaffId], references: [id])
+
+  masterIssueId   Int?
+  masterIssue     MasterIssue? @relation(fields: [masterIssueId], references: [id])
+
+  isDuplicate     Boolean     @default(false)
+  duplicateOfId   Int?
+  duplicateOf     Complaint?  @relation("DuplicateLink", fields: [duplicateOfId], references: [id])
+  duplicateLinks  Complaint[] @relation("DuplicateLink")
+  duplicateScore  Float?
+
+  beforePhotoUrl  String?
+  afterPhotoUrl   String?
+  resolutionNotes String?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  statusHistory   ComplaintStatusHistory[]
+  verifications   CitizenVerification[]
+  notifications   Notification[]
+}
+
+model ComplaintStatusHistory {
+  id          Int       @id @default(autoincrement())
+  complaintId Int
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  fromStatus  String?
+  toStatus    String
+  changedById Int?
+  changedBy   User?     @relation("UserStatusChanges", fields: [changedById], references: [id])
+  notes       String?
+  createdAt   DateTime  @default(now())
+}
+
+model CitizenVerification {
+  id          Int       @id @default(autoincrement())
+  complaintId Int
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  citizenId   Int
+  citizen     User      @relation(fields: [citizenId], references: [id])
+  isFixed     Boolean
+  feedback    String?
+  createdAt   DateTime  @default(now())
+}
+
+model Notification {
+  id          Int        @id @default(autoincrement())
+  userId      Int
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  complaintId Int?
+  complaint   Complaint? @relation(fields: [complaintId], references: [id], onDelete: SetNull)
+  title       String
+  message     String
+  isRead      Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+}
+
+model AuditEvent {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+}
