@@ -1,0 +1,21 @@
+name: Bug Report
+description: Create a report to help us improve CitySaathi
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for contributing to CitySaathi!
+  - type: input
+    id: summary
+    attributes:
+      label: Bug Summary
+      placeholder: e.g. Complaint submission returns 500 when image is missing
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      placeholder: 1. Go to citizen portal...
+    validations:
+      required: true
