@@ -445,7 +445,18 @@
     THEME_KEY: "citysaathi_theme",
     AUTH_TOKEN_KEY: "citysaathi_token",
     AUTH_USER_KEY: "citysaathi_user",
-    API_BASE: (window.location.port === "5000" || window.location.host.includes("5000")) ? "" : "http://localhost:5000",
+    API_BASE: (() => {
+      const isLocal = typeof window !== "undefined" && window.location && (
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname === "0.0.0.0" ||
+        window.location.protocol === "file:"
+      );
+      // When deployed (e.g. Netlify, custom HTTPS domains), use relative path
+      if (!isLocal) return "";
+      // When running locally, use relative path if on port 5000, otherwise point to local backend
+      return (window.location.port === "5000" || window.location.host.includes("5000")) ? "" : "http://localhost:5000";
+    })(),
 
     currentUser: null,
     authToken: null,
