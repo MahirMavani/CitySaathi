@@ -518,11 +518,37 @@
       }
 
       const res = await fetch(url, fetchOpts);
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || `HTTP ${res.status}`);
+
+      const contentType = res.headers.get('content-type') || '';
+      let data = null;
+      let text = '';
+
+      if (contentType.includes('application/json')) {
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          data = null;
+        }
+      } else {
+        try {
+          text = await res.text();
+          if (text && (text.trim().startsWith('{') || text.trim().startsWith('['))) {
+            data = JSON.parse(text);
+          }
+        } catch (textErr) {
+          text = '';
+        }
       }
-      return data;
+
+      if (!res.ok) {
+        const errorMsg = (data && (data.error || data.message)) ||
+          (text && text.trim().length > 0
+            ? (text.length > 120 ? text.slice(0, 120) + '...' : text.trim())
+            : `HTTP ${res.status} (${res.statusText || 'Error'})`);
+        throw new Error(errorMsg);
+      }
+
+      return data !== null ? data : text;
     },
 
     async syncFromServer() {
@@ -2293,10 +2319,9 @@
       resultEl?.classList.add("hidden");
 
       try {
-        const res = await fetch("/api/ai/generate-draft", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const data = await CivicStore.apiCall('/api/ai/generate-draft', {
+          method: 'POST',
+          body: {
             category,
             locationAddress: location,
             ward,
@@ -2305,12 +2330,9 @@
             citizenObservation: description,
             additionalDetails: whenNoticed,
             severity
-          })
+          }
         });
-
-        if (!res.ok) throw new Error("Draft generation failed (HTTP " + res.status + ")");
-        const data = await res.json();
-        const draft = data.draft || {};
+        const draft = data?.draft || {};
 
         // Populate Editable Title & Message
         const titleInput = document.getElementById("formTitle");

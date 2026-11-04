@@ -46,15 +46,23 @@ const serverlessHandler = serverless(app, {
   binary: ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
 });
 
-// 4. Netlify Lambda Handler with Path Normalization
+// 4. Netlify Lambda Handler with Comprehensive Path Normalization
 exports.handler = async (event, context) => {
-  // Clean up Netlify function rewrite prefix so Express routes receive /api/... or /uploads/...
-  if (event.path && event.path.startsWith('/.netlify/functions/api')) {
-    let cleanPath = event.path.replace(/^\/\.netlify\/functions\/api/, '');
-    if (!cleanPath.startsWith('/api') && !cleanPath.startsWith('/uploads')) {
-      cleanPath = '/api' + (cleanPath.startsWith('/') ? cleanPath : '/' + cleanPath);
-    }
-    event.path = cleanPath;
+  // Normalize incoming path for Express routing across all Netlify & Lambda event formats
+  let targetPath = event.path || event.rawPath || '';
+  if (targetPath.startsWith('/.netlify/functions/api')) {
+    targetPath = targetPath.replace(/^\/\.netlify\/functions\/api/, '');
+  }
+  if (!targetPath.startsWith('/api') && !targetPath.startsWith('/uploads')) {
+    targetPath = '/api' + (targetPath.startsWith('/') ? targetPath : '/' + targetPath);
+  }
+
+  event.path = targetPath;
+  if (event.rawPath !== undefined) {
+    event.rawPath = targetPath;
+  }
+  if (event.requestPath !== undefined) {
+    event.requestPath = targetPath;
   }
 
   return serverlessHandler(event, context);

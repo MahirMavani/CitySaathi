@@ -10,16 +10,29 @@ const http = require('http');
 class FastApiClient {
   constructor() {
     this.baseUrl = (process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
-    this.token = process.env.INTERNAL_AI_SERVICE_TOKEN || 'cs_sec_token_dev_microservice_2026';
     this.timeoutMs = parseInt(process.env.AI_SERVICE_TIMEOUT_MS || '3500', 10);
     this.isAvailable = false;
     this.lastChecked = 0;
   }
 
   /**
+   * Securely retrieve the internal token from Node.js process environment.
+   * Returns null if unconfigured (never falls back to hardcoded defaults).
+   */
+  get token() {
+    const raw = process.env.INTERNAL_AI_SERVICE_TOKEN;
+    return (raw && typeof raw === 'string' && raw.trim().length > 0) ? raw.trim() : null;
+  }
+
+  /**
    * Internal HTTP POST helper using fetch with AbortSignal timeout
    */
   async _post(endpoint, body, timeoutMs = this.timeoutMs) {
+    const currentToken = this.token;
+    if (!currentToken) {
+      throw new Error('INTERNAL_AI_SERVICE_TOKEN is not configured in server environment');
+    }
+
     const url = `${this.baseUrl}${endpoint}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -29,7 +42,7 @@ class FastApiClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Internal-Token': this.token
+          'X-Internal-Token': currentToken
         },
         body: JSON.stringify(body),
         signal: controller.signal

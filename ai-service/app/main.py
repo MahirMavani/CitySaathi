@@ -24,7 +24,7 @@ from .services.prioritization import prioritization_engine
 # Load environment variables
 load_dotenv()
 
-INTERNAL_TOKEN = os.getenv("INTERNAL_AI_SERVICE_TOKEN", "cs_sec_token_dev_microservice_2026")
+INTERNAL_TOKEN = os.getenv("INTERNAL_AI_SERVICE_TOKEN")
 ALLOWED_ORIGINS_STR = os.getenv("ALLOWED_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000")
 ALLOWED_ORIGINS = [orig.strip() for orig in ALLOWED_ORIGINS_STR.split(",") if orig.strip()]
 
@@ -53,14 +53,22 @@ def verify_internal_token(
     """
     Validates shared secret token between Node.js backend and FastAPI.
     Accepts X-Internal-Token header or Authorization: Bearer <token>.
+    Fails securely if INTERNAL_AI_SERVICE_TOKEN is not configured on the server.
     """
+    configured_token = os.getenv("INTERNAL_AI_SERVICE_TOKEN")
+    if not configured_token or not configured_token.strip():
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server configuration error: INTERNAL_AI_SERVICE_TOKEN is not configured."
+        )
+
     token = None
     if x_internal_token:
         token = x_internal_token.strip()
     elif authorization and authorization.startswith("Bearer "):
         token = authorization.split("Bearer ")[1].strip()
 
-    if not token or token != INTERNAL_TOKEN:
+    if not token or token != configured_token.strip():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing internal service authorization token."

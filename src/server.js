@@ -96,6 +96,14 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/staff', staffRoutes);
 
+// Explicit 404 JSON response for unmatched API routes
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: `API endpoint not found: ${req.method} ${req.originalUrl || req.url}`
+  });
+});
+
 // Serve Frontend Static Files
 const staticDir = path.join(__dirname, '..');
 app.use(express.static(staticDir));
