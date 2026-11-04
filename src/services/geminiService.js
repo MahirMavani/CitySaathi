@@ -93,7 +93,14 @@ class GeminiService {
     this.apiKey = '';
     this.client = null;
     this.primaryModel = process.env.GEMINI_MODEL || 'gemini-flash-lite-latest';
-    this.fallbackModel = 'gemini-flash-latest';
+    this.fallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-flash-latest';
+  }
+
+  /**
+   * Request timeout in milliseconds (defaults to 15000ms for resilient API generation).
+   */
+  get timeoutMs() {
+    return parseInt(process.env.GEMINI_TIMEOUT_MS || '15000', 10);
   }
 
   /**
@@ -157,7 +164,7 @@ class GeminiService {
   /**
    * Safe timeout wrapper for Gemini SDK calls to avoid long blocking on network delays
    */
-  async generateWithTimeout(client, model, contents, config, timeoutMs = 7000) {
+  async generateWithTimeout(client, model, contents, config, timeoutMs = this.timeoutMs) {
     let timer;
     const timeoutPromise = new Promise((_, reject) => {
       timer = setTimeout(() => reject(new Error(`Gemini ${model} request timed out after ${timeoutMs}ms`)), timeoutMs);
@@ -192,7 +199,7 @@ class GeminiService {
         this.primaryModel,
         'Respond with only the single word: READY',
         { maxOutputTokens: 10, temperature: 0.1 },
-        6000
+        this.timeoutMs
       );
       const text = (response.text || '').trim();
       return {
@@ -209,7 +216,7 @@ class GeminiService {
           this.fallbackModel,
           'Respond with only the single word: READY',
           { maxOutputTokens: 10, temperature: 0.1 },
-          6000
+          this.timeoutMs
         );
         const text = (fallbackRes.text || '').trim();
         return {
@@ -283,7 +290,7 @@ Return JSON with exactly these keys:
             this.primaryModel,
             prompt,
             { responseMimeType: 'application/json', temperature: 0.2 },
-            7000
+            this.timeoutMs
           );
         } catch (primaryErr) {
           console.warn(`[CitySaathi AI] ${this.primaryModel} failed (${primaryErr.message}), trying ${this.fallbackModel}...`);
@@ -293,7 +300,7 @@ Return JSON with exactly these keys:
             this.fallbackModel,
             prompt,
             { responseMimeType: 'application/json', temperature: 0.2 },
-            6000
+            this.timeoutMs
           );
         }
 
@@ -420,7 +427,7 @@ Return ONLY valid JSON:
           this.primaryModel,
           prompt,
           { responseMimeType: 'application/json', temperature: 0.2 },
-          7000
+          this.timeoutMs
         );
       } catch (e1) {
         usedModel = this.fallbackModel;
@@ -429,7 +436,7 @@ Return ONLY valid JSON:
           this.fallbackModel,
           prompt,
           { responseMimeType: 'application/json', temperature: 0.2 },
-          6000
+          this.timeoutMs
         );
       }
 
@@ -528,7 +535,7 @@ Return ONLY a valid JSON object matching this schema:
             this.primaryModel,
             prompt,
             { responseMimeType: 'application/json', temperature: 0.2 },
-            7000
+            this.timeoutMs
           );
         } catch (primaryErr) {
           console.warn(`[CitySaathi AI] ${this.primaryModel} failed (${primaryErr.message}), trying ${this.fallbackModel}...`);
@@ -538,7 +545,7 @@ Return ONLY a valid JSON object matching this schema:
             this.fallbackModel,
             prompt,
             { responseMimeType: 'application/json', temperature: 0.2 },
-            6000
+            this.timeoutMs
           );
         }
 
