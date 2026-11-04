@@ -10,7 +10,6 @@
 [functions]
   node_bundler = "esbuild"
   included_files = ["prisma/**", "data/**", "uploads/**"]
-  timeout = 26
 
 # Rewrite API routes to the Netlify serverless function
 [[redirects]]
