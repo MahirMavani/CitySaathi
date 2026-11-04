@@ -25,7 +25,10 @@ from .services.prioritization import prioritization_engine
 load_dotenv()
 
 INTERNAL_TOKEN = os.getenv("INTERNAL_AI_SERVICE_TOKEN")
-ALLOWED_ORIGINS_STR = os.getenv("ALLOWED_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000")
+ALLOWED_ORIGINS_STR = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5000,http://127.0.0.1:5000,https://city-saathi.netlify.app,https://citysaathi.netlify.app"
+)
 ALLOWED_ORIGINS = [orig.strip() for orig in ALLOWED_ORIGINS_STR.split(",") if orig.strip()]
 
 app = FastAPI(

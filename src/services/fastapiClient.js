@@ -9,10 +9,34 @@ const http = require('http');
 
 class FastApiClient {
   constructor() {
-    this.baseUrl = (process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
-    this.timeoutMs = parseInt(process.env.AI_SERVICE_TIMEOUT_MS || '3500', 10);
     this.isAvailable = false;
     this.lastChecked = 0;
+  }
+
+  /**
+   * Base URL for the AI microservice.
+   * Priority:
+   * 1. Explicit AI_SERVICE_URL environment variable
+   * 2. In serverless cloud (Netlify/Vercel/AWS Lambda): default to production Vercel FastAPI microservice
+   * 3. Local development fallback: http://127.0.0.1:8000
+   */
+  get baseUrl() {
+    const raw = process.env.AI_SERVICE_URL;
+    if (raw && typeof raw === 'string' && raw.trim().length > 0) {
+      return raw.trim().replace(/\/+$/, '');
+    }
+    const isServerless = !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL);
+    if (isServerless) {
+      return 'https://citysaathi-ai.vercel.app';
+    }
+    return 'http://127.0.0.1:8000';
+  }
+
+  /**
+   * Request timeout in milliseconds (defaults to 5000ms for resilient cross-cloud serverless).
+   */
+  get timeoutMs() {
+    return parseInt(process.env.AI_SERVICE_TIMEOUT_MS || '5000', 10);
   }
 
   /**
@@ -22,6 +46,18 @@ class FastApiClient {
   get token() {
     const raw = process.env.INTERNAL_AI_SERVICE_TOKEN;
     return (raw && typeof raw === 'string' && raw.trim().length > 0) ? raw.trim() : null;
+  }
+
+  /**
+   * Sanitize a URL for safe logging (strips query parameters and credentials).
+   */
+  _sanitizeUrl(rawUrl) {
+    try {
+      const u = new URL(rawUrl);
+      return `${u.protocol}//${u.host}${u.pathname}`;
+    } catch {
+      return rawUrl ? String(rawUrl).split('?')[0] : 'unknown';
+    }
   }
 
   /**
@@ -42,7 +78,8 @@ class FastApiClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Internal-Token': currentToken
+          'X-Internal-Token': currentToken,
+          'Authorization': `Bearer ${currentToken}`
         },
         body: JSON.stringify(body),
         signal: controller.signal
@@ -50,43 +87,63 @@ class FastApiClient {
 
       if (!res.ok) {
         const errorText = await res.text().catch(() => '');
-        throw new Error(`FastAPI responded with HTTP ${res.status}: ${errorText}`);
+        throw new Error(`FastAPI responded with HTTP ${res.status}: ${errorText.slice(0, 150)}`);
       }
 
       this.isAvailable = true;
       return await res.json();
+    } catch (err) {
+      const cause = err.cause ? (err.cause.message || err.cause.code || String(err.cause)) : err.message;
+      console.warn(`[CitySaathi] FastAPI POST ${endpoint} failed: ${err.name} - ${cause} (target: ${this._sanitizeUrl(url)})`);
+      throw err;
     } finally {
       clearTimeout(timer);
     }
   }
 
   /**
-   * Safe health check endpoint to check if Python AI service is running
+   * Safe health check endpoint to check if Python AI service is running.
+   * Defaults to 4000ms timeout for cross-cloud serverless resilience.
    */
-  async checkHealth(timeoutMs = 1500) {
+  async checkHealth(timeoutMs = parseInt(process.env.AI_HEALTH_TIMEOUT_MS || '4000', 10)) {
     const url = `${this.baseUrl}/health`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const start = Date.now();
 
     try {
       const res = await fetch(url, {
         method: 'GET',
         signal: controller.signal
       });
+
+      if (!res.ok) {
+        throw new Error(`FastAPI health returned HTTP ${res.status}`);
+      }
+
       const data = await res.json();
-      this.isAvailable = res.ok && data.status === 'healthy';
+      const isHealthy = data.status === 'healthy';
+      this.isAvailable = isHealthy;
       this.lastChecked = Date.now();
       return {
-        online: this.isAvailable,
+        online: isHealthy,
         engine: data.engine || 'FastAPI',
-        version: data.version || '1.0.0'
+        version: data.version || '1.0.0',
+        latencyMs: Date.now() - start,
+        target: this._sanitizeUrl(url)
       };
     } catch (err) {
       this.isAvailable = false;
       this.lastChecked = Date.now();
+      const cause = err.cause ? (err.cause.message || err.cause.code || String(err.cause)) : (err.name === 'AbortError' ? `Timeout after ${timeoutMs}ms` : err.message);
       return {
         online: false,
         error: err.message,
+        cause: cause,
+        target: this._sanitizeUrl(url),
+        configured: Boolean(process.env.AI_SERVICE_URL),
+        hasToken: Boolean(this.token),
+        latencyMs: Date.now() - start,
         fallback: 'Local JavaScript AI Services'
       };
     } finally {
@@ -182,7 +239,7 @@ class FastApiClient {
         }))
       };
 
-      const result = await this._post('/internal/v1/duplicates/check', payload, 3000);
+      const result = await this._post('/internal/v1/duplicates/check', payload, this.timeoutMs);
       if (result && result.success) {
         // Map Python response fields to CitySaathi duplicate format
         const formattedCandidates = (result.candidates || []).map(m => ({
@@ -237,7 +294,7 @@ class FastApiClient {
         duplicate_count: duplicateCount
       };
 
-      const result = await this._post('/internal/v1/priority/evaluate', payload, 2500);
+      const result = await this._post('/internal/v1/priority/evaluate', payload, this.timeoutMs);
       if (result && result.suggested_priority) {
         return {
           source: 'python-fastapi-microservice',

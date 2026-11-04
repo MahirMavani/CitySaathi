@@ -47,8 +47,9 @@ app.get('/api/health', async (req, res) => {
     const complaintCount = await prisma.complaint.count();
 
     // Check private Python FastAPI AI microservice availability
-    const aiServiceStatus = await fastapiClient.checkHealth(800).catch(() => ({
+    const aiServiceStatus = await fastapiClient.checkHealth(4000).catch((err) => ({
       online: false,
+      error: err.message,
       fallback: 'Local JavaScript AI Services'
     }));
 

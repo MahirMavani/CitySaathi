@@ -3,6 +3,10 @@
   publish = "."
   functions = "netlify/functions"
 
+[build.environment]
+  AI_SERVICE_URL = "https://citysaathi-ai.vercel.app"
+  AI_SERVICE_TIMEOUT_MS = "5000"
+
 [functions]
   node_bundler = "esbuild"
   included_files = ["prisma/**", "data/**", "uploads/**"]
