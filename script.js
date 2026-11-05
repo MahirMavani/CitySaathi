@@ -157,6 +157,31 @@
         <rect x="15" y="15" width="130" height="28" rx="6" fill="rgba(16,185,129,0.9)"/>
         <text x="80" y="34" fill="#FFFFFF" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">AFTER REPAIR (BWSSB)</text>
       </svg>
+    `),
+    spidermanArt: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+        <rect width="400" height="300" fill="#1e1e2f"/>
+        <circle cx="200" cy="140" r="70" fill="#d32f2f" stroke="#000" stroke-width="4"/>
+        <line x1="200" y1="70" x2="200" y2="210" stroke="#000" stroke-width="2"/>
+        <line x1="130" y1="140" x2="270" y2="140" stroke="#000" stroke-width="2"/>
+        <polygon points="160,130 185,150 165,155" fill="#fff" stroke="#000" stroke-width="3"/>
+        <polygon points="240,130 215,150 235,155" fill="#fff" stroke="#000" stroke-width="3"/>
+        <text x="200" y="260" font-family="Arial" font-size="22" fill="#ffeb3b" text-anchor="middle" font-weight="bold">SPIDER-MAN COMIC ART</text>
+      </svg>
+    `),
+    sedanCar: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+        <rect width="400" height="300" fill="#f0f4f8"/>
+        <rect x="70" y="140" width="260" height="70" rx="10" fill="#2563eb"/>
+        <path d="M120 140 L160 80 L250 80 L290 140 Z" fill="#3b82f6"/>
+        <polygon points="135,135 165,90 200,90 200,135" fill="#e0f2fe"/>
+        <polygon points="208,135 208,90 245,90 275,135" fill="#e0f2fe"/>
+        <circle cx="130" cy="210" r="30" fill="#1e293b"/>
+        <circle cx="130" cy="210" r="14" fill="#94a3b8"/>
+        <circle cx="270" cy="210" r="30" fill="#1e293b"/>
+        <circle cx="270" cy="210" r="14" fill="#94a3b8"/>
+        <text x="200" y="270" font-family="Arial" font-size="20" fill="#1e293b" text-anchor="middle" font-weight="bold">SEDAN CAR PHOTO</text>
+      </svg>
     `)
   };
 
@@ -924,6 +949,51 @@
         });
         if (res && res.success) return res.data;
       } catch (e) {}
+      return null;
+    },
+
+    async verifyImage({ imageFile, imageDataUrl, category, description, title }) {
+      try {
+        if (imageFile) {
+          const fd = new FormData();
+          fd.append('image', imageFile);
+          fd.append('category', category || 'Road / Pothole');
+          fd.append('description', description || '');
+          if (title) fd.append('title', title);
+          return await this.apiCall('/api/ai/verify-image', {
+            method: 'POST',
+            body: fd,
+            isFormData: true
+          });
+        } else if (imageDataUrl) {
+          return await this.apiCall('/api/ai/verify-image', {
+            method: 'POST',
+            body: {
+              image: imageDataUrl,
+              category: category || 'Road / Pothole',
+              description: description || '',
+              title: title || ''
+            }
+          });
+        }
+      } catch (err) {
+        console.warn("verifyImage API error:", err);
+        return {
+          success: false,
+          error: err.message,
+          data: {
+            detected_objects: [],
+            image_description: 'Visual AI verification network issue.',
+            detected_civic_issue: 'Pending Municipal Review',
+            complaint_category: category || 'Road / Pothole',
+            relevance_status: 'uncertain',
+            confidence_score: 0.0,
+            mismatch_reason: err.message,
+            user_message: 'Photo verification service temporarily unavailable. You can proceed with manual officer review.',
+            recommendation: 'Proceed with manual review'
+          }
+        };
+      }
       return null;
     },
 
@@ -2146,6 +2216,8 @@
     currentStep: 1,
     attachedPhoto: null,
     attachedPhotoFile: null,
+    imageVerificationResult: null,
+    manualReviewApproved: false,
     isRecordingVoice: false,
     mediaRecorder: null,
     audioChunks: [],
@@ -2156,6 +2228,7 @@
       this.bindStepButtons();
       this.bindDropzone();
       this.bindDemoSamples();
+      this.bindVerificationActions();
       this.bindVoiceRecording();
       this.bindLocationControls();
       this.bindFormSubmission();
@@ -2191,6 +2264,11 @@
           const cat = card.getAttribute("data-category");
           const input = document.getElementById("formCategory");
           if (input) input.value = cat;
+
+          // If photo is already attached, re-verify with newly selected category
+          if (this.attachedPhoto || this.attachedPhotoFile) {
+            this.verifyAttachedPhoto();
+          }
         });
       });
 
@@ -2225,6 +2303,21 @@
           document.getElementById("formDescription")?.focus();
           return;
         }
+
+        // Image verification guard
+        if (this.attachedPhoto && this.imageVerificationResult) {
+          if (this.imageVerificationResult.relevance_status === 'irrelevant') {
+            showToast("Visual evidence mismatch: " + (this.imageVerificationResult.mismatch_reason || "Please replace the image or remove it before proceeding."), "error");
+            document.getElementById("imageVerificationContainer")?.scrollIntoView({ behavior: 'smooth' });
+            return;
+          }
+          if (this.imageVerificationResult.relevance_status === 'uncertain' && !this.manualReviewApproved) {
+            showToast("Photo verification is inconclusive. Please upload a clearer photo or click 'Proceed with Manual Review'.", "warning");
+            document.getElementById("imageVerificationContainer")?.scrollIntoView({ behavior: 'smooth' });
+            return;
+          }
+        }
+
         this.goToStep(3);
         this.generateAiDraft();
       });
@@ -2377,6 +2470,34 @@
           }
         }
 
+        // Dynamic Observation & Evidence Badge (strictly ensures no misleading verified claim)
+        const confidenceBadge = document.getElementById("aiDraftConfidenceBadge");
+        if (confidenceBadge) {
+          const isVerified = Boolean(
+            this.attachedPhoto &&
+            this.imageVerificationResult &&
+            this.imageVerificationResult.relevance_status === 'relevant' &&
+            this.imageVerificationResult.confidence_score >= 0.70
+          );
+
+          if (isVerified) {
+            confidenceBadge.textContent = "✓ Evidence Verified (Photo Match)";
+            confidenceBadge.className = "badge-gemini";
+          } else if (this.attachedPhoto && this.imageVerificationResult?.relevance_status === 'uncertain') {
+            confidenceBadge.textContent = "⏳ Visual Evidence Under Review";
+            confidenceBadge.className = "badge-outline";
+          } else if (this.attachedPhoto && this.imageVerificationResult?.relevance_status === 'irrelevant') {
+            confidenceBadge.textContent = "⚠️ Visual Evidence Mismatch";
+            confidenceBadge.className = "badge-outline";
+          } else if (this.attachedPhoto) {
+            confidenceBadge.textContent = "⏳ Visual Evidence Under Review";
+            confidenceBadge.className = "badge-outline";
+          } else {
+            confidenceBadge.textContent = "Citizen Observation (No Image Attached)";
+            confidenceBadge.className = "badge-outline";
+          }
+        }
+
         // Duplicate Radar Check
         try {
           const dupRes = await CivicStore.checkDuplicates({
@@ -2420,6 +2541,12 @@
         if (fallbackAlert) {
           fallbackAlert.classList.remove("hidden");
           if (fallbackText) fallbackText.textContent = "Network or API issue. A local template draft is provided below for you to review and edit.";
+        }
+
+        const confidenceBadge = document.getElementById("aiDraftConfidenceBadge");
+        if (confidenceBadge) {
+          confidenceBadge.textContent = this.attachedPhoto ? "⏳ Visual Evidence Under Review" : "Citizen Observation (Offline Mode)";
+          confidenceBadge.className = "badge-outline";
         }
       } finally {
         loadingEl?.classList.add("hidden");
@@ -2536,23 +2663,59 @@
       });
     },
 
-    setPhotoPreview(dataUrl) {
-      this.attachedPhoto = dataUrl;
+    async svgToRasterPng(dataUrl) {
+      if (typeof dataUrl !== 'string' || !dataUrl.includes('image/svg+xml')) {
+        return dataUrl;
+      }
+      return new Promise((resolve) => {
+        try {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || 400;
+            canvas.height = img.naturalHeight || 250;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+          };
+          img.onerror = () => resolve(dataUrl);
+          img.src = dataUrl;
+        } catch (e) {
+          resolve(dataUrl);
+        }
+      });
+    },
+
+    async setPhotoPreview(dataUrl) {
+      // Convert SVG vector data to supported raster PNG before verification
+      let rasterUrl = dataUrl;
+      if (typeof dataUrl === 'string' && dataUrl.includes('image/svg+xml')) {
+        rasterUrl = await this.svgToRasterPng(dataUrl);
+      }
+      this.attachedPhoto = rasterUrl;
+      this.manualReviewApproved = false;
       const previewImg = document.getElementById("photoPreviewImg");
       const previewBox = document.getElementById("photoPreviewContainer");
       const dropContent = document.getElementById("dropzoneContent");
-      if (previewImg) previewImg.src = dataUrl;
+      if (previewImg) previewImg.src = rasterUrl;
       previewBox?.classList.remove("hidden");
       dropContent?.classList.add("hidden");
+
+      // Automatically trigger AI Visual Relevance Verification
+      this.verifyAttachedPhoto();
     },
 
     clearPhotoPreview() {
       this.attachedPhoto = null;
       this.attachedPhotoFile = null;
+      this.imageVerificationResult = null;
+      this.manualReviewApproved = false;
       const fileInput = document.getElementById("formPhotoFile");
       if (fileInput) fileInput.value = "";
       document.getElementById("photoPreviewContainer")?.classList.add("hidden");
       document.getElementById("dropzoneContent")?.classList.remove("hidden");
+      this.clearVerificationUI();
     },
 
     bindDemoSamples() {
@@ -2563,11 +2726,139 @@
           if (type === "garbage") asset = EvidenceAssets.garbageBefore;
           if (type === "streetlight") asset = EvidenceAssets.streetlightBefore;
           if (type === "water") asset = EvidenceAssets.waterBefore;
+          if (type === "spiderman") asset = EvidenceAssets.spidermanArt;
+          if (type === "car") asset = EvidenceAssets.sedanCar;
+
           this.attachedPhotoFile = null;
           this.setPhotoPreview(asset);
           showToast("Attached sample " + type + " photo for demo", "info");
         });
       });
+    },
+
+    bindVerificationActions() {
+      // Replace buttons
+      document.getElementById("ivReplaceImageBtn")?.addEventListener("click", () => {
+        document.getElementById("formPhotoFile")?.click();
+      });
+      document.getElementById("ivUncertainReplaceBtn")?.addEventListener("click", () => {
+        document.getElementById("formPhotoFile")?.click();
+      });
+
+      // Remove button
+      document.getElementById("ivRemoveImageBtn")?.addEventListener("click", () => {
+        this.clearPhotoPreview();
+        showToast("Mismatched image removed. You can attach a new photo or proceed without one.", "info");
+      });
+
+      // Proceed with manual review button
+      document.getElementById("ivProceedManualBtn")?.addEventListener("click", () => {
+        this.manualReviewApproved = true;
+        showToast("Manual officer review selected. You can proceed with complaint draft.", "success");
+        const descEl = document.getElementById("ivUncertainText");
+        if (descEl) descEl.innerHTML = "<strong>Manual Review Confirmed:</strong> Municipal ward officers will inspect your photo and complaint on site.";
+        const actions = document.querySelector("#ivUncertainBanner .iv-actions");
+        if (actions) actions.style.display = "none";
+      });
+    },
+
+    async verifyAttachedPhoto() {
+      if (!this.attachedPhoto && !this.attachedPhotoFile) {
+        this.clearVerificationUI();
+        return;
+      }
+
+      const container = document.getElementById("imageVerificationContainer");
+      const loading = document.getElementById("ivLoadingState");
+      const relevant = document.getElementById("ivRelevantBanner");
+      const irrelevant = document.getElementById("ivIrrelevantBanner");
+      const uncertain = document.getElementById("ivUncertainBanner");
+
+      container?.classList.remove("hidden");
+      loading?.classList.remove("hidden");
+      relevant?.classList.add("hidden");
+      irrelevant?.classList.add("hidden");
+      uncertain?.classList.add("hidden");
+
+      const uncertainActions = document.querySelector("#ivUncertainBanner .iv-actions");
+      if (uncertainActions) uncertainActions.style.display = "flex";
+
+      const category = document.getElementById("formCategory")?.value || "Road / Pothole";
+      const description = document.getElementById("formDescription")?.value.trim() || "";
+
+      try {
+        const res = await CivicStore.verifyImage({
+          imageFile: this.attachedPhotoFile,
+          imageDataUrl: this.attachedPhoto,
+          category,
+          description
+        });
+
+        loading?.classList.add("hidden");
+
+        const data = res?.data || {};
+        this.imageVerificationResult = data;
+        const status = data.relevance_status || 'uncertain';
+
+        if (status === 'relevant') {
+          relevant?.classList.remove("hidden");
+          const confEl = document.getElementById("ivRelevantConfidence");
+          const descEl = document.getElementById("ivRelevantText");
+          const tagsEl = document.getElementById("ivDetectedTags");
+
+          if (confEl) {
+            const pct = Math.round((data.confidence_score || 0.95) * 100);
+            confEl.textContent = `${pct}% Match`;
+          }
+          if (descEl) descEl.textContent = data.user_message || 'Photograph clearly depicts the reported civic problem.';
+          if (tagsEl) {
+            if (Array.isArray(data.detected_objects) && data.detected_objects.length > 0) {
+              tagsEl.innerHTML = data.detected_objects.slice(0, 5).map(o => `<span class="iv-tag">${escapeHtml(o)}</span>`).join('');
+            } else {
+              tagsEl.innerHTML = '';
+            }
+          }
+        } else if (status === 'irrelevant') {
+          irrelevant?.classList.remove("hidden");
+          const confEl = document.getElementById("ivIrrelevantConfidence");
+          const descEl = document.getElementById("ivIrrelevantText");
+          const reasonEl = document.getElementById("ivMismatchReason");
+
+          if (confEl) confEl.textContent = 'Mismatch Detected';
+          if (descEl) descEl.textContent = data.user_message || 'The uploaded photograph does not match your reported civic category.';
+          if (reasonEl) reasonEl.textContent = data.mismatch_reason || 'Image content does not match the civic problem.';
+        } else {
+          // uncertain
+          uncertain?.classList.remove("hidden");
+          const confEl = document.getElementById("ivUncertainConfidence");
+          const descEl = document.getElementById("ivUncertainText");
+
+          if (confEl) confEl.textContent = 'Pending Review';
+          if (descEl) descEl.textContent = data.user_message || 'Photo verification is inconclusive. You can upload a clearer photo or proceed with municipal manual review.';
+        }
+      } catch (err) {
+        console.warn("verifyAttachedPhoto error:", err);
+        loading?.classList.add("hidden");
+        uncertain?.classList.remove("hidden");
+        const descEl = document.getElementById("ivUncertainText");
+        if (descEl) descEl.textContent = 'Photo verification service is currently unavailable. Your photo will be attached for municipal officer manual review.';
+      }
+    },
+
+    clearVerificationUI() {
+      this.imageVerificationResult = null;
+      this.manualReviewApproved = false;
+      const container = document.getElementById("imageVerificationContainer");
+      const loading = document.getElementById("ivLoadingState");
+      const relevant = document.getElementById("ivRelevantBanner");
+      const irrelevant = document.getElementById("ivIrrelevantBanner");
+      const uncertain = document.getElementById("ivUncertainBanner");
+
+      container?.classList.add("hidden");
+      loading?.classList.add("hidden");
+      relevant?.classList.add("hidden");
+      irrelevant?.classList.add("hidden");
+      uncertain?.classList.add("hidden");
     },
 
     bindVoiceRecording() {

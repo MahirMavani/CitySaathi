@@ -8,6 +8,7 @@
  */
 
 const { GoogleGenAI } = require('@google/genai');
+const crypto = require('crypto');
 const aiClassifier = require('./aiClassifier');
 const priorityEngine = require('./priorityEngine');
 
@@ -94,6 +95,8 @@ class GeminiService {
     this.client = null;
     this.primaryModel = process.env.GEMINI_MODEL || 'gemini-flash-lite-latest';
     this.fallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-flash-latest';
+    this.verificationCache = new Map();
+    this.cacheTtlMs = 10 * 60 * 1000; // 10 minutes
   }
 
   /**
@@ -623,6 +626,308 @@ Return ONLY a valid JSON object matching this schema:
       },
       fallbackNotice
     };
+  }
+
+  /**
+   * Universal AI Image Relevance Verification:
+   * Uses Gemini Vision to analyze photo contents and compare against
+   * the selected category and description across all civic domains.
+   */
+  async verifyImageRelevance({
+    imageBuffer,
+    mimeType = 'image/jpeg',
+    category = 'Road / Pothole',
+    description = '',
+    title = ''
+  }) {
+    if (!imageBuffer) {
+      return {
+        success: false,
+        error: 'No image buffer provided for verification.'
+      };
+    }
+
+    // Resolve buffer and mimeType if passed as data URL or base64 string
+    let buffer = imageBuffer;
+    let resolvedMime = (mimeType || 'image/jpeg').toLowerCase();
+
+    if (typeof imageBuffer === 'string') {
+      const dataUriMatch = imageBuffer.match(/^data:([^;]+);base64,(.+)$/);
+      if (dataUriMatch) {
+        resolvedMime = dataUriMatch[1].toLowerCase();
+        buffer = Buffer.from(dataUriMatch[2], 'base64');
+      } else if (imageBuffer.startsWith('data:image/svg+xml;utf8,')) {
+        resolvedMime = 'image/svg+xml';
+        const rawSvg = decodeURIComponent(imageBuffer.replace('data:image/svg+xml;utf8,', ''));
+        buffer = Buffer.from(rawSvg, 'utf8');
+      } else {
+        buffer = Buffer.from(imageBuffer, 'base64');
+      }
+    }
+
+    // Supported raster formats for Gemini Vision
+    const supportedRasterMimes = new Set([
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/heic',
+      'image/heif'
+    ]);
+
+    // Safely reject SVG uploads before sending them to Gemini Vision
+    const isSvg = resolvedMime === 'image/svg+xml' ||
+      (buffer && buffer.length > 3 && buffer.slice(0, 100).toString('utf8').toLowerCase().includes('<svg'));
+
+    if (isSvg) {
+      return {
+        success: false,
+        error: 'SVG format is not supported for AI visual evidence verification. Please upload a real photograph in JPEG, PNG, or WebP format.',
+        data: {
+          detected_objects: [],
+          image_description: 'Vector SVG graphic or illustration.',
+          detected_civic_issue: 'None',
+          complaint_category: normalizeCategory(category),
+          relevance_status: 'uncertain',
+          confidence_score: 0.0,
+          mismatch_reason: 'SVG vector graphics cannot be verified as camera photographs. Please provide a standard raster photograph (JPEG, PNG, or WebP).',
+          user_message: 'SVG vector graphics cannot be verified by AI vision. Please upload a camera photograph (JPEG, PNG, WebP) or proceed with manual review.',
+          recommendation: 'Please upload a real photograph (JPEG, PNG, or WebP)'
+        }
+      };
+    }
+
+    if (!supportedRasterMimes.has(resolvedMime)) {
+      return {
+        success: false,
+        error: `Unsupported image format (${resolvedMime}). Allowed formats: JPEG, PNG, WEBP.`,
+        data: {
+          detected_objects: [],
+          image_description: 'Unsupported file format.',
+          detected_civic_issue: 'None',
+          complaint_category: normalizeCategory(category),
+          relevance_status: 'uncertain',
+          confidence_score: 0.0,
+          mismatch_reason: `Unsupported image format: ${resolvedMime}`,
+          user_message: 'Please upload a standard image file (JPEG, PNG, WEBP).',
+          recommendation: 'Replace with supported image format'
+        }
+      };
+    }
+
+    const cleanCategory = normalizeCategory(category);
+    const cleanDesc = (description || '').trim();
+    const cleanTitle = (title || '').trim();
+    // Normalize description: lowercase, strip punctuation, collapse whitespace
+    const normalizedDesc = cleanDesc.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+
+    // Cache lookup by sha256 hash of image buffer + category + normalized description
+    const cacheKey = crypto
+      .createHash('sha256')
+      .update(buffer)
+      .update(cleanCategory)
+      .update(normalizedDesc)
+      .digest('hex');
+
+    const cached = this.verificationCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.cacheTtlMs) {
+      return cached.result;
+    }
+
+    const client = this.getClient();
+
+    // If Gemini API is unconfigured, return honest uncertain status (never falsely verified)
+    if (!client) {
+      const offlineResult = {
+        success: true,
+        source: 'local_fallback',
+        isGemini: false,
+        verified: false,
+        data: {
+          detected_objects: [],
+          image_description: 'AI visual verification service is currently unconfigured or offline.',
+          detected_civic_issue: 'Pending Municipal Review',
+          complaint_category: cleanCategory,
+          relevance_status: 'uncertain',
+          confidence_score: 0.0,
+          mismatch_reason: 'Gemini Vision verification service is not active.',
+          user_message: 'AI visual verification is temporarily offline. Your complaint and photo will be inspected manually by municipal field officers.',
+          recommendation: 'Proceed with complaint (officer manual review)'
+        }
+      };
+      return offlineResult;
+    }
+
+    // Prepare Gemini multimodal prompt
+    const base64Data = buffer.toString('base64');
+    const prompt = `You are CitySaathi Vision AI, an expert municipal image verification engine for civic complaints in Bengaluru (BBMP, BESCOM, BWSSB, Solid Waste Management).
+Your task is to analyze the provided image and determine whether it provides visual evidence supporting the reported civic complaint.
+
+Complaint Context:
+- Category: "${cleanCategory}"
+- Citizen Observation / Description: "${cleanDesc || 'No observation specified'}"
+- Title / Summary: "${cleanTitle || 'No title specified'}"
+
+Evaluation Rules:
+1. Universal Scope: Assess the image against the stated category and description across ALL municipal domains:
+   - "Road / Pothole": potholes, cratered asphalt, broken pavements, broken curbs, cave-ins, open manholes.
+   - "Garbage / Waste": garbage heaps, overflowing dumpsters, uncollected litter, discarded plastic, rotting organic waste, blackspots.
+   - "Streetlight": street lamps, light fixtures, electrical poles, dark streets at night with non-functional lights, dangling electrical wires.
+   - "Water / Drainage": water leaks, pipe bursts, gushing water, stagnant sewage, overflowing drains, blocked storm water drains.
+   - "Public Amenities": damaged park benches, broken playground equipment, fallen tree branches blocking roads, missing street signs, vandalized public toilets.
+   - Any other civic domain: evaluate whether the photo visually substantiates the complaint.
+
+2. Visual Understanding:
+   - Identify specific visible objects and environmental surroundings.
+   - Both real-world photographs and civic evidence illustrations/diagrams depicting the reported problem are valid evidence.
+   - Distinguish civic evidence from pop-culture characters, cartoons, comic art, random vehicles, or unrelated items.
+   - Check if the image has adequate visual evidence (not pitch black, not completely blurry, not an unidentifiable texture).
+
+3. Classification Decision:
+   - "relevant": The image depicts, illustrates, or shows the reported civic issue, conditions, or physical objects directly consistent with the category (e.g. garbage piles/bins for Garbage, potholes/cratered roads for Road, water leaks/pipes for Water, dark lamps/light poles for Streetlight).
+   - "irrelevant": The image clearly depicts something completely unrelated to the civic complaint (e.g. superhero / pop-culture character like Spider-Man, comic art, random vehicles when reporting water leaks, animals/pets, selfies, food, indoor furniture) OR depicts an entirely different civic category.
+   - "uncertain": The image is too blurry, too dark, pitch black, heavily distorted, an extreme close-up with insufficient context, or ambiguous such that visual verification cannot be confirmed with confidence.
+
+4. Fairness & Civic Integrity:
+   - Real-world civic photos are often taken in challenging angles, rain, low light, or by citizens on mobile phones. If a photo or evidence diagram shows reasonable indicators of the problem, mark it "relevant".
+   - Only mark "irrelevant" when there is a clear mismatch (e.g. superhero art, comic drawings, completely unrelated objects like cars for pipe leaks, unrelated indoor scenes).
+   - If image is unreadable, dark, blank, or ambiguous, mark "uncertain" so municipal officers can perform manual review.
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "detected_objects": ["<object 1>", "<object 2>", ...],
+  "image_description": "<1-2 concise objective sentences describing what is visible in the photo>",
+  "detected_civic_issue": "<civic issue identified, or 'None', or 'Unclear'>",
+  "complaint_category": "${cleanCategory}",
+  "relevance_status": "<'relevant' | 'irrelevant' | 'uncertain'>",
+  "confidence_score": <number between 0.0 and 1.0>,
+  "mismatch_reason": "<Clear sentence explaining why the image does not match the complaint, or null if relevant>",
+  "user_message": "<User-friendly, constructive feedback message explaining the verification result to the citizen>",
+  "recommendation": "<'Proceed with complaint' | 'Please replace image with a clear photo of the civic issue' | 'Clearer photo recommended, or proceed for manual inspection'>"
+}`;
+
+    let response;
+    let usedModel = this.primaryModel;
+
+    try {
+      response = await this.generateWithTimeout(
+        client,
+        this.primaryModel,
+        [prompt, { inlineData: { data: base64Data, mimeType: resolvedMime === 'image/jpg' ? 'image/jpeg' : resolvedMime } }],
+        { responseMimeType: 'application/json', temperature: 0.1 },
+        this.timeoutMs
+      );
+    } catch (primaryErr) {
+      console.warn(`[CitySaathi AI Vision] ${this.primaryModel} failed (${primaryErr.message}), trying ${this.fallbackModel}...`);
+      usedModel = this.fallbackModel;
+      try {
+        response = await this.generateWithTimeout(
+          client,
+          this.fallbackModel,
+          [prompt, { inlineData: { data: base64Data, mimeType: resolvedMime === 'image/jpg' ? 'image/jpeg' : resolvedMime } }],
+          { responseMimeType: 'application/json', temperature: 0.1 },
+          this.timeoutMs
+        );
+      } catch (fallbackErr) {
+        console.warn(`[CitySaathi AI Vision] Fallback model also failed: ${fallbackErr.message}`);
+        return {
+          success: true,
+          source: 'local_fallback',
+          isGemini: false,
+          verified: false,
+          data: {
+            detected_objects: [],
+            image_description: 'Visual AI verification timed out or encountered network error.',
+            detected_civic_issue: 'Pending Municipal Review',
+            complaint_category: cleanCategory,
+            relevance_status: 'uncertain',
+            confidence_score: 0.0,
+            mismatch_reason: `API request error: ${fallbackErr.message}`,
+            user_message: 'AI image verification temporarily timed out. Your complaint and photo will be inspected manually by municipal field officers.',
+            recommendation: 'Proceed with complaint (officer manual review)'
+          }
+        };
+      }
+    }
+
+    const rawText = response.text || (response.candidates && response.candidates[0]?.content?.parts[0]?.text);
+    if (!rawText) {
+      return {
+        success: true,
+        source: 'gemini',
+        isGemini: true,
+        model: usedModel,
+        verified: false,
+        data: {
+          detected_objects: [],
+          image_description: 'No response content returned from vision model.',
+          detected_civic_issue: 'Unclear',
+          complaint_category: cleanCategory,
+          relevance_status: 'uncertain',
+          confidence_score: 0.3,
+          mismatch_reason: 'Empty model response',
+          user_message: 'Photo verification was inconclusive. Proceeding with manual review.',
+          recommendation: 'Proceed with manual review'
+        }
+      };
+    }
+
+    try {
+      const parsed = JSON.parse(rawText.trim());
+      const rawStatus = (parsed.relevance_status || '').toLowerCase().trim();
+      const relevanceStatus = ['relevant', 'irrelevant', 'uncertain'].includes(rawStatus) ? rawStatus : 'uncertain';
+      const confScore = typeof parsed.confidence_score === 'number' ? Math.max(0.0, Math.min(1.0, parsed.confidence_score)) : 0.85;
+
+      const finalData = {
+        detected_objects: Array.isArray(parsed.detected_objects) ? parsed.detected_objects : [],
+        image_description: parsed.image_description || 'Visual analysis completed.',
+        detected_civic_issue: parsed.detected_civic_issue || (relevanceStatus === 'relevant' ? cleanCategory : 'None'),
+        complaint_category: cleanCategory,
+        relevance_status: relevanceStatus,
+        confidence_score: confScore,
+        mismatch_reason: relevanceStatus === 'relevant' ? null : (parsed.mismatch_reason || null),
+        user_message: parsed.user_message || (relevanceStatus === 'relevant' ? 'Visual evidence matches complaint.' : 'Please verify uploaded photo.'),
+        recommendation: parsed.recommendation || (relevanceStatus === 'relevant' ? 'Proceed with complaint' : 'Review uploaded image')
+      };
+
+      const result = {
+        success: true,
+        source: 'gemini',
+        isGemini: true,
+        model: usedModel,
+        verified: relevanceStatus === 'relevant',
+        data: finalData
+      };
+
+      // Store in LRU cache (limit size to 100)
+      if (this.verificationCache.size > 100) {
+        const firstKey = this.verificationCache.keys().next().value;
+        this.verificationCache.delete(firstKey);
+      }
+      this.verificationCache.set(cacheKey, { timestamp: Date.now(), result });
+
+      return result;
+    } catch (parseErr) {
+      console.warn('[CitySaathi AI Vision] Failed to parse JSON response:', parseErr.message, rawText);
+      return {
+        success: true,
+        source: 'gemini',
+        isGemini: true,
+        model: usedModel,
+        verified: false,
+        data: {
+          detected_objects: [],
+          image_description: 'Failed to parse visual response.',
+          detected_civic_issue: 'Unclear',
+          complaint_category: cleanCategory,
+          relevance_status: 'uncertain',
+          confidence_score: 0.3,
+          mismatch_reason: 'Vision response parsing error',
+          user_message: 'Photo verification was inconclusive. Proceeding with manual review.',
+          recommendation: 'Proceed with manual review'
+        }
+      };
+    }
   }
 }
 

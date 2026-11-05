@@ -2633,6 +2633,180 @@ img {
   background-color: var(--border-medium);
 }
 
+/* Real-Time AI Image Verification Banner */
+.image-verification-container {
+  margin-top: 14px;
+}
+
+.iv-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  transition: all 0.2s ease-in-out;
+}
+
+.iv-card.iv-loading {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  align-items: center;
+}
+
+.iv-spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(59, 130, 246, 0.25);
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.iv-text strong {
+  display: block;
+  font-size: 0.86rem;
+  color: #60A5FA;
+  margin-bottom: 2px;
+}
+
+.iv-text p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Green Banner - Relevant */
+.iv-card.iv-relevant {
+  background: rgba(16, 185, 129, 0.09);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+
+.iv-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.iv-content {
+  flex: 1;
+}
+
+.iv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.iv-status-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.iv-relevant .iv-status-title {
+  color: #10B981;
+}
+
+.iv-confidence {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.iv-confidence-green {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+}
+
+.iv-desc {
+  font-size: 0.80rem;
+  color: var(--text-secondary);
+  margin: 0 0 6px 0;
+  line-height: 1.4;
+}
+
+.iv-detected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.iv-tag {
+  font-size: 0.70rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Red Banner - Irrelevant */
+.iv-card.iv-irrelevant {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+.iv-irrelevant .iv-status-title {
+  color: #EF4444;
+}
+
+.iv-confidence-red {
+  background: rgba(239, 68, 68, 0.2);
+  color: #F87171;
+}
+
+.iv-mismatch-box {
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 3px solid #EF4444;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  color: #FCA5A5;
+  margin: 8px 0;
+}
+
+.iv-mismatch-box strong {
+  color: #FFFFFF;
+}
+
+.iv-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* Yellow Banner - Uncertain */
+.iv-card.iv-uncertain {
+  background: rgba(245, 158, 11, 0.09);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+}
+
+.iv-uncertain .iv-status-title {
+  color: #F59E0B;
+}
+
+.iv-confidence-yellow {
+  background: rgba(245, 158, 11, 0.2);
+  color: #FBBF24;
+}
+
+.btn-demo-sample-mismatch {
+  border-color: rgba(239, 68, 68, 0.35) !important;
+  color: #FCA5A5 !important;
+}
+
+.btn-demo-sample-mismatch:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+}
+
 /* Voice Feature Card */
 .voice-feature-card {
   background-color: var(--bg-subtle);

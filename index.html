@@ -786,6 +786,74 @@
                     </div>
                   </div>
 
+                  <!-- Real-Time AI Image Verification Feedback Container -->
+                  <div class="image-verification-container hidden" id="imageVerificationContainer">
+                    <!-- Loading State -->
+                    <div class="iv-card iv-loading hidden" id="ivLoadingState">
+                      <div class="iv-spinner"></div>
+                      <div class="iv-text">
+                        <strong>✨ Gemini Vision is analyzing your photo evidence...</strong>
+                        <p>Comparing photograph contents with selected category and description.</p>
+                      </div>
+                    </div>
+
+                    <!-- GREEN: Relevant Evidence Banner -->
+                    <div class="iv-card iv-relevant hidden" id="ivRelevantBanner">
+                      <div class="iv-icon">✅</div>
+                      <div class="iv-content">
+                        <div class="iv-header">
+                          <strong class="iv-status-title" id="ivRelevantTitle">Photo Evidence Verified (Category Match Confirmed)</strong>
+                          <span class="iv-confidence iv-confidence-green" id="ivRelevantConfidence">95% Match</span>
+                        </div>
+                        <p class="iv-desc" id="ivRelevantText">Photograph clearly depicts the reported civic problem.</p>
+                        <div class="iv-detected-tags" id="ivDetectedTags"></div>
+                      </div>
+                    </div>
+
+                    <!-- RED: Irrelevant Evidence Banner -->
+                    <div class="iv-card iv-irrelevant hidden" id="ivIrrelevantBanner">
+                      <div class="iv-icon">⚠️</div>
+                      <div class="iv-content">
+                        <div class="iv-header">
+                          <strong class="iv-status-title" id="ivIrrelevantTitle">Visual Evidence Mismatch Detected</strong>
+                          <span class="iv-confidence iv-confidence-red" id="ivIrrelevantConfidence">Mismatch</span>
+                        </div>
+                        <p class="iv-desc" id="ivIrrelevantText">The uploaded photograph does not match your reported civic category.</p>
+                        <div class="iv-mismatch-box" id="ivMismatchBox">
+                          <strong>Reason:</strong> <span id="ivMismatchReason">Mismatched image content.</span>
+                        </div>
+                        <div class="iv-actions">
+                          <button type="button" class="btn btn-sm btn-danger" id="ivReplaceImageBtn">
+                            🔄 Replace Image
+                          </button>
+                          <button type="button" class="btn btn-sm btn-ghost" id="ivRemoveImageBtn">
+                            ✕ Remove Image
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- YELLOW: Verification Uncertain Banner -->
+                    <div class="iv-card iv-uncertain hidden" id="ivUncertainBanner">
+                      <div class="iv-icon">ℹ️</div>
+                      <div class="iv-content">
+                        <div class="iv-header">
+                          <strong class="iv-status-title" id="ivUncertainTitle">Photo Verification Inconclusive</strong>
+                          <span class="iv-confidence iv-confidence-yellow" id="ivUncertainConfidence">Pending Review</span>
+                        </div>
+                        <p class="iv-desc" id="ivUncertainText">The image is too blurry, dark, or ambiguous to confirm automatically. You can upload a clearer photo or proceed for manual inspection by municipal officers.</p>
+                        <div class="iv-actions">
+                          <button type="button" class="btn btn-sm btn-warning" id="ivUncertainReplaceBtn">
+                            📷 Upload Clearer Photo
+                          </button>
+                          <button type="button" class="btn btn-sm btn-outline" id="ivProceedManualBtn">
+                            Proceed with Manual Review &rarr;
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <!-- Quick Demo Evidence Selectors for Presentation Demoing -->
                   <div class="quick-demo-photos">
                     <span class="qdp-label">💡 Presentation Demo Samples:</span>
@@ -793,6 +861,8 @@
                     <button type="button" class="btn-demo-sample" data-sample="garbage">Use Waste Bin Photo</button>
                     <button type="button" class="btn-demo-sample" data-sample="streetlight">Use Dark Streetlight Photo</button>
                     <button type="button" class="btn-demo-sample" data-sample="water">Use Water Leak Photo</button>
+                    <button type="button" class="btn-demo-sample btn-demo-sample-mismatch" data-sample="spiderman">🕷️ Spider-Man Art (Mismatch)</button>
+                    <button type="button" class="btn-demo-sample btn-demo-sample-mismatch" data-sample="car">🚗 Sedan Car (Mismatch)</button>
                   </div>
                 </div>
               </div>
@@ -840,7 +910,7 @@
                 <div class="ai-draft-meta-bar">
                   <div class="adm-left">
                     <span class="badge-gemini" id="aiDraftEngineBadge">✨ Google Gemini AI</span>
-                    <span class="badge-outline" id="aiDraftConfidenceBadge">Verified Observation</span>
+                    <span class="badge-outline" id="aiDraftConfidenceBadge">Citizen Observation</span>
                   </div>
                   <button type="button" class="btn btn-ghost btn-xs" id="regenerateAiDraftBtn">
                     <span>🔄 Regenerate Draft</span>

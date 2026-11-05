@@ -4,6 +4,7 @@
  * Gemini-powered assistance and rewriting, and ML model evaluation metrics.
  */
 
+const fs = require('fs');
 const aiClassifier = require('../services/aiClassifier');
 const priorityEngine = require('../services/priorityEngine');
 const geminiService = require('../services/geminiService');
@@ -296,6 +297,70 @@ async function generateComplaintDraft(req, res) {
   }
 }
 
+// 8. Universal AI Image Relevance Verification Endpoint
+async function verifyImageEvidence(req, res) {
+  try {
+    let imageBuffer = null;
+    let mimeType = 'image/jpeg';
+
+    if (req.file) {
+      mimeType = req.file.mimetype || 'image/jpeg';
+      if (req.file.buffer) {
+        imageBuffer = req.file.buffer;
+      } else if (req.file.path) {
+        imageBuffer = fs.readFileSync(req.file.path);
+      }
+    } else if (req.body.image || req.body.photo || req.body.dataUrl) {
+      const raw = req.body.image || req.body.photo || req.body.dataUrl;
+      if (typeof raw === 'string') {
+        const match = raw.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          mimeType = match[1];
+          imageBuffer = Buffer.from(match[2], 'base64');
+        } else if (raw.startsWith('data:image/svg+xml;utf8,')) {
+          mimeType = 'image/svg+xml';
+          imageBuffer = Buffer.from(decodeURIComponent(raw.replace('data:image/svg+xml;utf8,', '')), 'utf8');
+        } else if (raw.trim().startsWith('<svg')) {
+          mimeType = 'image/svg+xml';
+          imageBuffer = Buffer.from(raw, 'utf8');
+        } else {
+          imageBuffer = Buffer.from(raw, 'base64');
+        }
+      }
+    }
+
+    if (!imageBuffer) {
+      return res.status(400).json({
+        success: false,
+        error: 'No image file or image data provided for verification.'
+      });
+    }
+
+    const { category = 'Road / Pothole', description = '', citizenObservation = '', text = '', title = '' } = req.body;
+    const observation = description || citizenObservation || text || '';
+
+    const result = await geminiService.verifyImageRelevance({
+      imageBuffer,
+      mimeType,
+      category,
+      description: observation,
+      title
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('Image verification error:', err);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to verify image evidence.'
+    });
+  }
+}
+
 module.exports = {
   classifyText,
   geminiAssist,
@@ -303,5 +368,6 @@ module.exports = {
   getModelMetrics,
   analyzePriority,
   getGeminiStatus,
-  generateComplaintDraft
+  generateComplaintDraft,
+  verifyImageEvidence
 };

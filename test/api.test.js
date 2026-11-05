@@ -737,4 +737,354 @@ describe('CITYSAATHI Full-Stack Test Suite', () => {
     assert.equal(found.status, 'Submitted');
     await prisma.$disconnect();
   });
+
+  // 16. Universal AI Image Relevance Verification Suite (Scenarios 1-10)
+  const zlib = require('zlib');
+  function createPng(width, height, drawFn) {
+    const rowSize = 1 + width * 4;
+    const rawData = Buffer.alloc(rowSize * height);
+
+    for (let y = 0; y < height; y++) {
+      const rowOffset = y * rowSize;
+      rawData[rowOffset] = 0;
+      for (let x = 0; x < width; x++) {
+        const pxOffset = rowOffset + 1 + x * 4;
+        const [r, g, b, a = 255] = drawFn(x, y, width, height);
+        rawData[pxOffset] = r;
+        rawData[pxOffset + 1] = g;
+        rawData[pxOffset + 2] = b;
+        rawData[pxOffset + 3] = a;
+      }
+    }
+
+    const idatData = zlib.deflateSync(rawData);
+    const signature = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+    const ihdrData = Buffer.alloc(13);
+    ihdrData.writeUInt32BE(width, 0);
+    ihdrData.writeUInt32BE(height, 4);
+    ihdrData[8] = 8;
+    ihdrData[9] = 6;
+    ihdrData[10] = 0;
+    ihdrData[11] = 0;
+    ihdrData[12] = 0;
+
+    function crc32(buf) {
+      let crc = 0xFFFFFFFF;
+      for (let i = 0; i < buf.length; i++) {
+        crc ^= buf[i];
+        for (let j = 0; j < 8; j++) {
+          crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
+        }
+      }
+      return (crc ^ 0xFFFFFFFF) >>> 0;
+    }
+
+    function makeChunk(type, data) {
+      const len = data.length;
+      const buf = Buffer.alloc(8 + len + 4);
+      buf.writeUInt32BE(len, 0);
+      buf.write(type, 4, 4, 'ascii');
+      data.copy(buf, 8);
+      buf.writeUInt32BE(crc32(buf.subarray(4, 8 + len)), 8 + len);
+      return buf;
+    }
+
+    return Buffer.concat([signature, makeChunk('IHDR', ihdrData), makeChunk('IDAT', idatData), makeChunk('IEND', Buffer.alloc(0))]);
+  }
+
+  // Generate valid raster PNG test images
+  const potholePngBase64 = createPng(120, 80, (x, y) => {
+    const dx = (x - 60) / 35;
+    const dy = (y - 45) / 18;
+    if (dx * dx + dy * dy < 1) return [15, 23, 42, 255];
+    if (dx * dx + dy * dy < 1.3) return [30, 41, 59, 255];
+    if (y > 38 && y < 42 && (x < 30 || x > 90)) return [253, 224, 71, 255];
+    return [71, 85, 105, 255];
+  }).toString('base64');
+
+  const garbagePngBase64 = createPng(160, 120, (x, y) => {
+    if (y > 90) return [160, 165, 170, 255];
+    if (x >= 40 && x <= 120 && y >= 45 && y <= 95) {
+      if (y < 50 || x < 45 || x > 115) return [4, 100, 70, 255];
+      return [5, 150, 105, 255];
+    }
+    const b1 = (x - 60) ** 2 + (y - 40) ** 2 < 180;
+    const b2 = (x - 85) ** 2 + (y - 35) ** 2 < 220;
+    const b3 = (x - 105) ** 2 + (y - 42) ** 2 < 160;
+    const spill = (x - 128) ** 2 + (y - 85) ** 2 < 140;
+    if (b1 || spill) return [20, 20, 25, 255];
+    if (b2) return [180, 130, 70, 255];
+    if (b3) return [240, 200, 50, 255];
+    return [220, 225, 230, 255];
+  }).toString('base64');
+
+  const spidermanPngBase64 = createPng(120, 80, (x, y) => {
+    const dx = (x - 60) / 25;
+    const dy = (y - 40) / 25;
+    if (dx * dx + dy * dy < 1) {
+      const eye1 = Math.abs(x - 52) < 6 && Math.abs(y - 38) < 6;
+      const eye2 = Math.abs(x - 68) < 6 && Math.abs(y - 38) < 6;
+      if (eye1 || eye2) return [255, 255, 255, 255];
+      if (x === 60 || y === 40) return [0, 0, 0, 255];
+      return [211, 47, 47, 255];
+    }
+    return [30, 30, 47, 255];
+  }).toString('base64');
+
+  const carPngBase64 = createPng(120, 80, (x, y) => {
+    const w1 = (x - 40) ** 2 + (y - 62) ** 2 < 64;
+    const w2 = (x - 80) ** 2 + (y - 62) ** 2 < 64;
+    if (w1 || w2) return [15, 23, 42, 255];
+    if (x > 25 && x < 95 && y > 45 && y < 62) return [37, 99, 235, 255];
+    if (x > 42 && x < 78 && y > 30 && y < 45) return [59, 130, 246, 255];
+    return [240, 244, 248, 255];
+  }).toString('base64');
+
+  const pipePngBase64 = createPng(160, 120, (x, y) => {
+    if (x > 20 && x < 50 && y > 30 && y < 70) return [90, 100, 110, 255];
+    if (x >= 50 && x < 90 && Math.abs((y - 45) - (x - 50) * 0.4) < 12) return [180, 230, 255, 255];
+    const dx = (x - 95) / 55;
+    const dy = (y - 85) / 25;
+    if (dx * dx + dy * dy < 1) return [30, 90, 160, 255];
+    return [80, 85, 90, 255];
+  }).toString('base64');
+
+  const blankPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+  // Scenario 1: Garbage / Waste + Garbage pile photo -> Relevant
+  test('AA. Image Verification: Garbage / Waste + garbage pile photo returns relevant match', async () => {
+    const res = await fetch(`${BASE_URL}/ai/verify-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: `data:image/png;base64,${garbagePngBase64}`,
+        category: 'Garbage / Waste',
+        description: 'Overflowing garbage bin and plastic waste uncollected on roadside'
+      })
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.success, true);
+    assert.ok(data.data);
+    assert.equal(data.data.relevance_status, 'relevant');
+    assert.ok(data.data.confidence_score >= 0.70);
+    assert.equal(data.data.mismatch_reason, null);
+    assert.ok(Array.isArray(data.data.detected_objects));
+  });
+
+  // Scenario 2: Garbage / Waste + Spider-Man illustration -> Irrelevant
+  test('AB. Image Verification: Garbage / Waste + Spider-Man illustration returns irrelevant mismatch', async () => {
+    const res = await fetch(`${BASE_URL}/ai/verify-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: `data:image/png;base64,${spidermanPngBase64}`,
+        category: 'Garbage / Waste',
+        description: 'Huge garbage heap near bus stop'
+      })
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.success, true);
+    assert.ok(data.data);
+    assert.equal(data.data.relevance_status, 'irrelevant');
+    assert.ok(data.data.confidence_score >= 0.70);
+    assert.ok(data.data.mismatch_reason && data.data.mismatch_reason.length > 5);
+    console.log('   [Spider-Man Mismatch Reason]:', data.data.mismatch_reason);
+  });
+
+  // Scenario 3: Water / Drainage + Car photo -> Irrelevant
+  test('AC. Image Verification: Water / Drainage + Sedan car photo returns irrelevant mismatch', async () => {
+    const res = await fetch(`${BASE_URL}/ai/verify-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: `data:image/png;base64,${carPngBase64}`,
+        category: 'Water / Drainage',
+        description: 'Major potable water pipeline leaking onto the road'
+      })
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.success, true);
+    assert.ok(data.data);
+    assert.equal(data.data.relevance_status, 'irrelevant');
+    assert.ok(data.data.mismatch_reason && data.data.mismatch_reason.length > 5);
+    console.log('   [Car Mismatch Reason]:', data.data.mismatch_reason);
+  });
+
+  // Scenario 4: Water / Drainage + Leaking water pipe -> Relevant
+  test('AD. Image Verification: Water / Drainage + leaking pipe photo returns relevant match', async () => {
+    const res = await fetch(`${BASE_URL}/ai/verify-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: `data:image/png;base64,${pipePngBase64}`,
+        category: 'Water / Drainage',
+        description: 'Potable water pipeline gushing water onto road'
+      })
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.success, true);
+    assert.equal(data.data.relevance_status, 'relevant');
+    assert.ok(data.data.confidence_score >= 0.70);
+    assert.equal(data.data.mismatch_reason, null);
+  });
+
+  // Scenario 5: Road / Pothole + Pothole photo -> Relevant
+  test('AE. Image Verification: Road / Pothole + crater pothole photo returns relevant match', async () => {
+    const res = await fetch(`${BASE_URL}/ai/verify-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: `data:image/png;base64,${potholePngBase64}`,
+        category: 'Road / Pothole',
+        description: 'Dangerous deep road crater on main road'
+      })
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.success, true);
+    assert.equal(data.data.relevance_status, 'relevant');
+    assert.ok(data.data.confidence_score >= 0.70);
+    assert.equal(data.data.mismatch_reason, null);
+  });
+
+  // Scenario 6: Streetlight + Unrelated car photo -> Irrelevant
+  test('AF. Image Verification: Streetlight + unrelated car photo returns irrelevant mismatch', async () => {
+    const res = await fetch(`${BASE_URL}/ai/verify-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: `data:image/png;base64,${carPngBase64}`,
+        category: 'Streetlight',
+        description: 'Streetlight out of order and road is dark at night'
+      })
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.success, true);
+    assert.equal(data.data.relevance_status, 'irrelevant');
+    assert.ok(data.data.mismatch_reason);
+  });
+
+  // Scenario 7: Blurry/unclear/blank photo -> Uncertain
+  test('AG. Image Verification: Blank / pitch dark image returns uncertain status', async () => {
+    const res = await fetch(`${BASE_URL}/ai/verify-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: `data:image/png;base64,${blankPngBase64}`,
+        category: 'Road / Pothole',
+        description: 'Pothole on 100ft road'
+      })
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.success, true);
+    assert.equal(data.data.relevance_status, 'uncertain');
+    assert.ok(data.data.recommendation);
+  });
+
+  // Scenario 8: SVG format is safely rejected before Gemini Vision
+  test('AH. Image Verification: SVG vector format is safely rejected with clear guidance', async () => {
+    const res = await fetch(`${BASE_URL}/ai/verify-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: '<svg xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="red"/></svg>',
+        mimeType: 'image/svg+xml',
+        category: 'Road / Pothole',
+        description: 'Pothole on 100ft road'
+      })
+    });
+
+    assert.equal(res.status, 400);
+    const data = await res.json();
+    assert.equal(data.success, false);
+    assert.ok(data.error.includes('SVG format is not supported'));
+    assert.equal(data.data.relevance_status, 'uncertain');
+  });
+
+  // Scenario 9: Fallback when API key is unconfigured
+  test('AI. Image Verification: Offline / unconfigured engine returns uncertain fallback notice (never falsely verified)', async () => {
+    const geminiService = require('../src/services/geminiService');
+    const origGetClient = geminiService.getClient;
+    geminiService.getClient = () => null;
+
+    try {
+      const offlinePng = createPng(50, 50, () => [128, 128, 128, 255]);
+      const result = await geminiService.verifyImageRelevance({
+        imageBuffer: offlinePng,
+        mimeType: 'image/png',
+        category: 'Public Amenities',
+        description: 'Damaged public park bench unique offline test'
+      });
+
+      assert.equal(result.success, true);
+      assert.equal(result.verified, false);
+      assert.equal(result.data.relevance_status, 'uncertain');
+      assert.equal(result.data.confidence_score, 0.0);
+      assert.ok(result.data.user_message.includes('temporarily offline') || result.data.user_message.includes('unavailable'));
+    } finally {
+      geminiService.getClient = origGetClient;
+    }
+  });
+
+  // Scenario 10: Missing image preserves optional evidence policy, while irrelevant image is blocked at submission
+  test('AJ. Backend Guard: Rejects irrelevant photo at submission, allows submission with no photo', async () => {
+    // 1. Submit with irrelevant Spider-Man photo for Garbage complaint -> should be rejected with 400
+    // Uses the same normalized description as in test AB so it hits the cache instantly!
+    const rejectRes = await fetch(`${BASE_URL}/complaints`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${citizenToken}`
+      },
+      body: JSON.stringify({
+        title: 'Overflowing dumpster on 12th Main',
+        description: 'Huge garbage heap near bus stop',
+        category: 'Garbage / Waste',
+        ward: 'Indiranagar (Ward 112)',
+        locationAddress: '12th Main, Indiranagar',
+        photo: `data:image/png;base64,${spidermanPngBase64}`
+      })
+    });
+
+    assert.equal(rejectRes.status, 400);
+    const rejectData = await rejectRes.json();
+    assert.equal(rejectData.success, false);
+    assert.ok(rejectData.error.includes('Image verification failed'));
+    assert.equal(rejectData.imageVerification.relevance_status, 'irrelevant');
+
+    // 2. Submit with no photo at all -> succeeds with 201 (optional evidence policy)
+    const successRes = await fetch(`${BASE_URL}/complaints`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${citizenToken}`
+      },
+      body: JSON.stringify({
+        title: 'Routine waste accumulation near junction',
+        description: 'Small pile of dry leaves and waste.',
+        category: 'Garbage / Waste',
+        ward: 'Indiranagar (Ward 112)',
+        locationAddress: '12th Main, Indiranagar'
+      })
+    });
+
+    assert.equal(successRes.status, 201);
+    const successData = await successRes.json();
+    assert.equal(successData.success, true);
+    assert.equal(successData.complaint.beforePhotoUrl, null);
+    createdComplaintIds.push(successData.complaint.id);
+  });
 });

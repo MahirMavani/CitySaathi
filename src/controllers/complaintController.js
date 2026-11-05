@@ -4,11 +4,13 @@
  * repair evidence upload, and closed-loop citizen verification.
  */
 
+const fs = require('fs');
 const { PrismaClient } = require('@prisma/client');
 const aiClassifier = require('../services/aiClassifier');
 const priorityEngine = require('../services/priorityEngine');
 const duplicateDetector = require('../services/duplicateDetector');
 const fastapiClient = require('../services/fastapiClient');
+const geminiService = require('../services/geminiService');
 
 const prisma = new PrismaClient();
 
@@ -178,10 +180,58 @@ async function createComplaint(req, res) {
 
     // Handle uploaded photo
     let beforePhotoUrl = null;
+    let imageBufferForVerify = null;
+    let imageMimeForVerify = 'image/jpeg';
+
     if (req.file) {
       beforePhotoUrl = `/uploads/${req.file.filename}`;
+      if (req.file.buffer) {
+        imageBufferForVerify = req.file.buffer;
+      } else if (req.file.path && fs.existsSync(req.file.path)) {
+        try {
+          imageBufferForVerify = fs.readFileSync(req.file.path);
+        } catch (e) {}
+      }
+      imageMimeForVerify = req.file.mimetype || 'image/jpeg';
     } else if (req.body.photo && typeof req.body.photo === 'string' && req.body.photo.length > 5) {
       beforePhotoUrl = req.body.photo;
+      const match = req.body.photo.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        imageMimeForVerify = match[1];
+        imageBufferForVerify = Buffer.from(match[2], 'base64');
+      } else if (req.body.photo.startsWith('data:image/svg+xml;utf8,')) {
+        imageMimeForVerify = 'image/svg+xml';
+        imageBufferForVerify = Buffer.from(decodeURIComponent(req.body.photo.replace('data:image/svg+xml;utf8,', '')), 'utf8');
+      }
+    }
+
+    // Server-side AI Image Relevance Verification Guard
+    let visualVerification = null;
+    if (imageBufferForVerify && geminiService.isConfigured()) {
+      try {
+        const verifyRes = await geminiService.verifyImageRelevance({
+          imageBuffer: imageBufferForVerify,
+          mimeType: imageMimeForVerify,
+          category: finalCategory,
+          description: description.trim(),
+          title: title.trim()
+        });
+
+        if (verifyRes && verifyRes.data) {
+          visualVerification = verifyRes.data;
+          // If the image is explicitly irrelevant (mismatch), reject submission
+          if (verifyRes.data.relevance_status === 'irrelevant') {
+            return res.status(400).json({
+              success: false,
+              error: `Image verification failed: ${verifyRes.data.mismatch_reason || 'The uploaded photograph does not match the selected complaint category.'} Please replace the image or remove it before submitting.`,
+              imageVerification: verifyRes.data
+            });
+          }
+        }
+      } catch (imgErr) {
+        console.warn('[CitySaathi] Image verification guard error:', imgErr.message);
+        // Do not block submission on verification exceptions; fallback to manual review
+      }
     }
 
     const complaintCode = await generateComplaintCode();
